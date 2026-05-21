@@ -214,14 +214,6 @@ export default function OnboardingPage() {
                   </p>
                 </div>
 
-                {!oauthReady && (
-                  <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-amber-400/80">
-                    GitHub OAuth is not configured on this server. Ask the deployer to set{' '}
-                    <code className="bg-black/30 px-1 rounded">GITHUB_CLIENT_ID</code> and{' '}
-                    <code className="bg-black/30 px-1 rounded">GITHUB_CLIENT_SECRET</code> in backend/.env.
-                  </div>
-                )}
-
                 <IntegrationCard
                   provider="github"
                   integration={githubIntegration}

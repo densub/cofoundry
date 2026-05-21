@@ -75,37 +75,11 @@ export default function IntegrationsPage() {
         </p>
       </div>
 
-      {oauthReady.github && oauthReady.linkedin ? (
+      {oauthReady.github && (
         <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 mb-8">
           <p className="text-xs text-emerald-400/90">
-            Sign in, then click Connect. You will be sent to GitHub or LinkedIn to approve access for <span className="font-medium">your</span> account only.
+            Click Connect to approve GitHub access for <span className="font-medium">your</span> account and import your repositories.
           </p>
-          <p className="text-xs text-white/35 mt-2">
-            LinkedIn apps in development mode may only allow users added under your LinkedIn app&apos;s &quot;Users&quot; tab until the app is verified.
-          </p>
-        </div>
-      ) : (
-        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 mb-8">
-          <p className="text-xs text-amber-400/80">
-            <span className="font-semibold text-amber-400">One-time app setup</span> (you, the deployer) — register OAuth apps once in{' '}
-            <code className="bg-black/30 px-1 rounded">backend/.env</code>. After that, every signed-in user can connect their own accounts.
-          </p>
-          <ul className="mt-1.5 space-y-1 text-xs text-amber-400/60">
-            {!oauthReady.github && (
-              <li>
-                <span className="font-medium text-amber-400/80">GitHub:</span>{' '}
-                github.com/settings/developers → callback{' '}
-                <code className="bg-black/30 px-1 rounded">http://localhost:3001/api/integrations/github/callback</code>
-              </li>
-            )}
-            {!oauthReady.linkedin && (
-              <li>
-                <span className="font-medium text-amber-400/80">LinkedIn:</span>{' '}
-                linkedin.com/developers → product &quot;Sign In with LinkedIn using OpenID Connect&quot; → callback{' '}
-                <code className="bg-black/30 px-1 rounded">http://localhost:3001/api/integrations/linkedin/callback</code>
-              </li>
-            )}
-          </ul>
         </div>
       )}
 
@@ -130,7 +104,7 @@ export default function IntegrationsPage() {
           <IntegrationCard
             provider="linkedin"
             integration={linkedin}
-            enabled={oauthReady.linkedin}
+            enabled={false}
             onConnected={loadIntegrations}
             onDisconnected={loadIntegrations}
             onImported={() => showToast('success', 'LinkedIn nodes added to your graph!')}

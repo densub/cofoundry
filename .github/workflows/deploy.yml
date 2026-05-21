@@ -1,0 +1,48 @@
+# Deploy to Cloud Run on every push to main (runs cloudbuild.yaml).
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
+env:
+  GCP_PROJECT_ID: cofoundry-497002
+  GCP_REGION: us-central1
+
+jobs:
+  deploy:
+    name: Cloud Build → Cloud Run
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Submit build and deploy
+        run: |
+          gcloud builds submit \
+            --config=cloudbuild.yaml \
+            --project="${GCP_PROJECT_ID}" \
+            .
+
+      - name: Summary
+        run: |
+          echo "### Deployment complete" >> "$GITHUB_STEP_SUMMARY"
+          echo "- App: https://cofoundry.app" >> "$GITHUB_STEP_SUMMARY"
+          echo "- API: https://api.cofoundry.app" >> "$GITHUB_STEP_SUMMARY"
+          echo "- [Cloud Build history](https://console.cloud.google.com/cloud-build/builds?project=${GCP_PROJECT_ID})" >> "$GITHUB_STEP_SUMMARY"

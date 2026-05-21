@@ -223,7 +223,9 @@ export default function IntegrationCard({
           } disabled:opacity-50`}
         >
           {!enabled
-            ? 'Not available — app OAuth not configured'
+            ? isGitHub
+              ? 'Not available — app OAuth not configured'
+              : 'Coming Soon'
             : loading === 'connect'
               ? 'Redirecting…'
               : `Connect your ${isGitHub ? 'GitHub' : 'LinkedIn'}`}

@@ -13,6 +13,7 @@ backend/dist/
 !.env.example
 !**/.env.example
 infra/gcp/domain-contact.yaml
+github-actions-key.json
 
 # Common credential / key files
 *.pem

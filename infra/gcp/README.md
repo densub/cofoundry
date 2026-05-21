@@ -7,8 +7,7 @@ Project: **cofoundry-497002** · Region: **us-central1**
 | Artifact Registry | `us-central1-docker.pkg.dev/cofoundry-497002/cofoundry` |
 | Cloud Run API | `cofoundry-api` |
 | Cloud Run Web | `cofoundry-web` |
-| Cloud Build trigger | `cofoundry-deploy-main` (on push to `main`) |
-| GitHub connection | `cofoundry-github` |
+| CI/CD | GitHub Actions → Cloud Build ([GITHUB_ACTIONS.md](./GITHUB_ACTIONS.md)) |
 
 ## One-time setup
 
@@ -17,18 +16,11 @@ Project: **cofoundry-497002** · Region: **us-central1**
 ./infra/gcp/sync-secrets.sh   # push backend/.env + frontend/.env → Secret Manager
 ```
 
-## Connect GitHub (required for auto-deploy)
+## Auto-deploy on push to `main`
 
-1. Open the OAuth link printed by `setup.sh`, or:
-   [Cloud Build → GitHub connections](https://console.cloud.google.com/cloud-build/connections;region=us-central1?project=cofoundry-497002)
-2. Authorize **densub/cofoundry** for connection `cofoundry-github`.
-3. Create the deploy trigger:
+See **[GITHUB_ACTIONS.md](./GITHUB_ACTIONS.md)** — one-time `GCP_SA_KEY` secret, then every merge to `main` deploys.
 
-```bash
-./infra/gcp/create-trigger.sh
-```
-
-## Manual deploy (test pipeline)
+## Manual deploy
 
 ```bash
 gcloud builds submit --config=cloudbuild.yaml --project=cofoundry-497002 .

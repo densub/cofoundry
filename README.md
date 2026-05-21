@@ -158,18 +158,19 @@ Stop: `npm run docker:down`
 
 ## Deploy on Google Cloud
 
-CI/CD deploys to **Cloud Run** on every merge to `main` (project `cofoundry-497002`).
+**GitHub Actions** deploys to **Cloud Run** on every push to `main` (project `cofoundry-497002`).
+
+One-time setup:
 
 ```bash
-./infra/gcp/setup.sh          # enable APIs, Artifact Registry, IAM, secrets
-./infra/gcp/sync-secrets.sh   # upload local .env → Secret Manager
-# Complete GitHub OAuth (link in setup output), then:
-./infra/gcp/create-trigger.sh
+./infra/gcp/setup.sh                    # APIs, Artifact Registry, Secret Manager
+./infra/gcp/sync-secrets.sh             # upload local .env → Secret Manager
+./infra/gcp/setup-github-actions.sh     # create SA → add GCP_SA_KEY in GitHub repo secrets
 ```
 
-Manual test deploy: `gcloud builds submit --config=cloudbuild.yaml --project=cofoundry-497002 .`
+See [infra/gcp/GITHUB_ACTIONS.md](infra/gcp/GITHUB_ACTIONS.md). Manual deploy: `gcloud builds submit --config=cloudbuild.yaml --project=cofoundry-497002 .`
 
-Full docs: [infra/gcp/README.md](infra/gcp/README.md) · Domain: **cofoundry.app** (~$14/yr) — [infra/gcp/DOMAIN.md](infra/gcp/DOMAIN.md)
+Full docs: [infra/gcp/README.md](infra/gcp/README.md) · Domain: **cofoundry.app** — [infra/gcp/DOMAIN.md](infra/gcp/DOMAIN.md)
 
 ## Scripts
 
