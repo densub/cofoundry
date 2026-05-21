@@ -7,7 +7,7 @@ export default function LandingPage() {
       <nav className="flex items-center justify-between px-8 py-5 border-b border-space-600/80">
         <Logo size="md" />
         <Link to="/auth" className="px-5 py-2 rounded-lg btn-primary text-sm">
-          Get started
+          Sign in
         </Link>
       </nav>
 
@@ -29,7 +29,7 @@ export default function LandingPage() {
 
         <div className="flex flex-wrap gap-4 justify-center">
           <Link to="/auth" className="px-8 py-3 rounded-lg btn-primary font-semibold">
-            Start with GitHub
+            Sign in to CoFoundry
           </Link>
           <a href="#how" className="px-8 py-3 rounded-lg btn-secondary font-medium">
             How it works

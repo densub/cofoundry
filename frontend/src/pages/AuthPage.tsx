@@ -93,7 +93,7 @@ export default function AuthPage() {
               className="w-full py-2.5 rounded-lg bg-white text-space-950 font-semibold text-sm flex items-center justify-center gap-2 hover:bg-white/90 disabled:opacity-60 transition-colors"
             >
               <GitHubIcon className="w-5 h-5" />
-              {githubLoading ? 'Redirecting…' : mode === 'signin' ? 'Continue with GitHub' : 'Sign up with GitHub'}
+              {githubLoading ? 'Redirecting…' : mode === 'signin' ? 'Sign in with GitHub' : 'Create account with GitHub'}
             </button>
 
             <div className="flex items-center gap-3 my-6">

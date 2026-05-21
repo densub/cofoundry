@@ -71,14 +71,14 @@ export default function IntegrationsPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white">Integrations</h1>
         <p className="text-white/40 text-sm mt-1">
-          Connect GitHub to choose repositories as <span className="text-white/60">project nodes</span> in your graph. Matching uses projects only.
+          Connect GitHub to choose repositories as <span className="text-white/60">project nodes</span> in your graph. Matching uses imported projects only.
         </p>
       </div>
 
       {oauthReady.github && (
         <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 mb-8">
           <p className="text-xs text-emerald-400/90">
-            Click Connect to approve GitHub access for <span className="font-medium">your</span> account, then select the repositories to import.
+            This connection is separate from sign-in. GitHub access lets CoFoundry list repos for selection; only imported repos become graph nodes.
           </p>
         </div>
       )}

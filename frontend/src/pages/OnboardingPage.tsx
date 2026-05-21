@@ -163,7 +163,7 @@ export default function OnboardingPage() {
               <div className="space-y-5">
                 <h2 className="text-xl font-semibold text-white">Tell us about yourself</h2>
                 <p className="text-white/40 text-sm -mt-2">
-                  Next you will connect GitHub and choose which repositories become project nodes.
+                  Next you will connect GitHub for repo import and choose which repositories become project nodes.
                 </p>
 
                 <div>
@@ -201,7 +201,7 @@ export default function OnboardingPage() {
                   onClick={handleProfileNext}
                   className="w-full py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 font-medium text-sm transition-colors"
                 >
-                  Next: Connect GitHub →
+                  Next: Connect GitHub for repo import →
                 </button>
               </div>
             )}
@@ -211,7 +211,7 @@ export default function OnboardingPage() {
                 <div>
                   <h2 className="text-xl font-semibold text-white">Import your projects</h2>
                   <p className="text-white/40 text-sm mt-1">
-                    Connect GitHub and choose which repos become project nodes.
+                    This is separate from sign-in. Connect GitHub so CoFoundry can list repos, then import only the ones you choose.
                   </p>
                 </div>
 

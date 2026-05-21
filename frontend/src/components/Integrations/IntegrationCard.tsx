@@ -361,6 +361,14 @@ export default function IntegrationCard({
         <p className="text-xs text-red-400 bg-red-400/10 rounded-lg px-3 py-2 mb-3">{error}</p>
       )}
 
+      {!connected && isGitHub && enabled && (
+        <div className="mb-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-xs text-white/45 space-y-1">
+          <p>GitHub may ask for repo access so CoFoundry can list your repositories.</p>
+          <p>You choose what to import after returning here.</p>
+          <p>Unselected repos are not saved as graph nodes or used for matching.</p>
+        </div>
+      )}
+
       {/* Actions */}
       {!connected ? (
         <button
@@ -378,7 +386,7 @@ export default function IntegrationCard({
               : 'Coming Soon'
             : loading === 'connect'
               ? 'Redirecting…'
-              : `Connect your ${isGitHub ? 'GitHub' : 'LinkedIn'}`}
+              : isGitHub ? 'Connect GitHub for repo import' : 'Connect your LinkedIn'}
         </button>
       ) : (
         <div className="flex gap-2">
