@@ -5,6 +5,7 @@ import { supabaseAdmin } from '../lib/supabase'
 import { fetchGitHubData, GitHubRepo } from '../services/github'
 import { fetchLinkedInProfile } from '../services/linkedin'
 import { createNode } from '../services/graph'
+import { generateNodeContent } from '../services/llm'
 
 function githubProjectBody(repo: GitHubRepo): { content: string; summary: string } {
   const summary =
@@ -116,7 +117,7 @@ router.get('/github/url', authMiddleware, (req: AuthRequest, res: Response): voi
       : '/integrations'
   const state = signState(req.userId!, 'github', returnTo)
   const params = new URLSearchParams({
-    client_id: process.env.GITHUB_CLIENT_ID,
+    client_id: process.env.GITHUB_CLIENT_ID!,
     scope: 'read:user repo',
     state,
   })
@@ -263,7 +264,7 @@ router.get('/linkedin/url', authMiddleware, (req: AuthRequest, res: Response): v
   const state = signState(req.userId!, 'linkedin')
   const params = new URLSearchParams({
     response_type: 'code',
-    client_id: process.env.LINKEDIN_CLIENT_ID,
+    client_id: process.env.LINKEDIN_CLIENT_ID!,
     redirect_uri: `${APP_URL}/api/integrations/linkedin/callback`,
     scope: 'openid profile email',
     state,

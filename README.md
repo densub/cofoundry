@@ -23,10 +23,11 @@ Find collaborators who actually build what you build. CoFoundry connects your Gi
 
 ```
 plugandplay/
-├── frontend/          # React app (port 5173)
+├── frontend/          # React app (port 5173 dev / nginx in Docker)
 ├── backend/           # Express API (port 3001)
 ├── supabase/
 │   └── migrations/    # SQL schema
+├── docker-compose.yml # Run full stack in containers
 ├── migrate.js         # Run migrations against Supabase
 ├── .env.example       # Root env reference
 └── package.json       # Dev scripts (concurrently)
@@ -34,7 +35,7 @@ plugandplay/
 
 ## Prerequisites
 
-- Node.js 18+
+- Node.js 18+ (local dev) or [Docker](https://docs.docker.com/get-docker/) (containerized)
 - A [Supabase](https://supabase.com) project
 - [Anthropic API key](https://console.anthropic.com/) (match insights)
 - [OpenAI API key](https://platform.openai.com/) (embeddings — required for matching)
@@ -80,8 +81,18 @@ cp frontend/.env.example frontend/.env
 | `VITE_SUPABASE_URL` | Same as backend Supabase URL |
 | `VITE_SUPABASE_ANON_KEY` | Same anon key |
 | `VITE_API_URL` | Backend URL, e.g. `http://localhost:3001` |
+| `VITE_AUTH_REDIRECT_URL` | Optional; default `{origin}/auth/callback` |
 
-**GitHub OAuth callback:** `http://localhost:3001/api/integrations/github/callback`
+**Sign in / sign up with GitHub (Supabase Auth)**
+
+1. Supabase → **Authentication** → **Providers** → enable **GitHub** and paste your GitHub OAuth app Client ID & Secret.
+2. GitHub OAuth app → **Authorization callback URL**:  
+   `https://voxxnyznweutlmrlgqmy.supabase.co/auth/v1/callback`
+3. Supabase → **Authentication** → **URL Configuration** → add redirect URLs, e.g.  
+   `http://localhost:5173/auth/callback` (and your production URL when deployed).
+
+**GitHub OAuth (repo import — separate app or same app with a second callback):**  
+`http://localhost:3001/api/integrations/github/callback`
 
 Never commit `.env` files — they are listed in `.gitignore`.
 
@@ -100,6 +111,66 @@ npm run dev
 - App: http://localhost:5173  
 - API: http://localhost:3001  
 
+## Run with Docker
+
+The stack runs as two containers: **backend** (Node API) and **frontend** (nginx serving the Vite build and proxying `/api` to the backend).
+
+### 1. Configure env files
+
+```bash
+cp backend/.env.example backend/.env
+# Fill in Supabase, Anthropic, OpenAI, GitHub OAuth, etc.
+
+cp docker-compose.env.example .env
+# Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (same values as frontend/.env)
+```
+
+For Docker, set OAuth URLs in `backend/.env`:
+
+| Variable | Docker local value |
+|----------|-------------------|
+| `FRONTEND_URL` | `http://localhost:8080` |
+| `APP_URL` | `http://localhost:3001` |
+
+**GitHub OAuth callback** (unchanged — hits the API directly):  
+`http://localhost:3001/api/integrations/github/callback`
+
+### 2. Migrations (still on the host)
+
+Docker does not run migrations. Apply schema once against Supabase:
+
+```bash
+npm run db:migrate
+```
+
+### 3. Start containers
+
+```bash
+npm run docker:up
+# or: docker compose up --build
+```
+
+- App: http://localhost:8080  
+- API: http://localhost:3001  
+- Health: http://localhost:3001/health  
+
+Stop: `npm run docker:down`
+
+## Deploy on Google Cloud
+
+CI/CD deploys to **Cloud Run** on every merge to `main` (project `cofoundry-497002`).
+
+```bash
+./infra/gcp/setup.sh          # enable APIs, Artifact Registry, IAM, secrets
+./infra/gcp/sync-secrets.sh   # upload local .env → Secret Manager
+# Complete GitHub OAuth (link in setup output), then:
+./infra/gcp/create-trigger.sh
+```
+
+Manual test deploy: `gcloud builds submit --config=cloudbuild.yaml --project=cofoundry-497002 .`
+
+Full docs: [infra/gcp/README.md](infra/gcp/README.md) · Domain: **cofoundry.app** (~$14/yr) — [infra/gcp/DOMAIN.md](infra/gcp/DOMAIN.md)
+
 ## Scripts
 
 | Command | Description |
@@ -109,6 +180,9 @@ npm run dev
 | `npm run dev:backend` | API with hot reload |
 | `npm run build` | Production build |
 | `npm run db:migrate` | Apply Supabase SQL migrations |
+| `npm run docker:up` | Build and start Docker Compose stack |
+| `npm run docker:down` | Stop containers |
+| `npm run docker:build` | Build images without starting |
 
 ## Security notes
 

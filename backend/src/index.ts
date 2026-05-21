@@ -21,6 +21,6 @@ app.use('/api/chat', chatRoutes)
 app.use('/api/matching', matchingRoutes)
 app.use('/api/integrations', integrationRoutes)
 
-app.listen(PORT, () => {
-  console.log(`Backend running on http://localhost:${PORT}`)
+app.listen(Number(PORT), '0.0.0.0', () => {
+  console.log(`Backend running on http://0.0.0.0:${PORT}`)
 })

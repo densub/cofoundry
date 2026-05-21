@@ -3,7 +3,7 @@ import OpenAI from 'openai'
 let openai: OpenAI | null = null
 let warnedMissingKey = false
 
-function isConfiguredKey(key: string | undefined): key is string {
+function isConfiguredKey(key: string | undefined): boolean {
   if (!key?.trim()) return false
   const k = key.trim()
   if (/your_|optional|replace|example|changeme|\.\.\./i.test(k)) return false
@@ -13,7 +13,7 @@ function isConfiguredKey(key: string | undefined): key is string {
 function getClient() {
   const key = process.env.OPENAI_API_KEY
   if (!isConfiguredKey(key)) {
-    if (!warnedMissingKey && key?.trim()) {
+    if (!warnedMissingKey && typeof key === 'string' && key.trim()) {
       console.warn('[embedding] OPENAI_API_KEY is unset or placeholder — embeddings disabled')
       warnedMissingKey = true
     }

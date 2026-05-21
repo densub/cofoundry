@@ -7,7 +7,10 @@
     "dev:frontend": "npm --prefix frontend run dev",
     "install:all": "npm --prefix backend install && npm --prefix frontend install",
     "build": "npm --prefix frontend run build && npm --prefix backend run build",
-    "db:migrate": "node migrate.js"
+    "db:migrate": "node migrate.js",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down",
+    "docker:build": "docker compose build"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
