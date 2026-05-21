@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Integration, integrationsApi } from '../../lib/api'
 import { useStore } from '../../store/useStore'
 import { nodesApi } from '../../lib/api'
+import { GitHubRepo } from '../../types'
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 function GitHubIcon({ className }: { className?: string }) {
@@ -47,11 +48,72 @@ export default function IntegrationCard({
   const [showManual, setShowManual] = useState(false)
   const [manualAbout, setManualAbout] = useState('')
   const [manualSkills, setManualSkills] = useState('')
-  const { addNode, addEdge } = useStore()
+  const [repoSearch, setRepoSearch] = useState('')
+  const [selectedRepoIds, setSelectedRepoIds] = useState<number[]>([])
+  const [repos, setRepos] = useState<GitHubRepo[]>([])
+  const [reposLoading, setReposLoading] = useState(false)
+  const [repoTotal, setRepoTotal] = useState<number | null>(null)
+  const [repoLanguages, setRepoLanguages] = useState<string[]>([])
 
   const isGitHub = provider === 'github'
   const connected = !!integration
   const meta = integration?.metadata ?? {}
+  const publicRepos = useMemo(() => repos.filter(repo => !repo.private), [repos])
+  const displayLanguages = repoLanguages.length > 0
+    ? repoLanguages
+    : Array.isArray(meta.topLanguages)
+      ? meta.topLanguages
+      : []
+  const filteredRepos = useMemo(() => {
+    const query = repoSearch.trim().toLowerCase()
+    if (!query) return repos
+    return repos.filter(repo => {
+      const fields = [
+        repo.name,
+        repo.full_name,
+        repo.description ?? '',
+        repo.language ?? '',
+        ...(repo.topics ?? []),
+      ]
+      return fields.some(field => field.toLowerCase().includes(query))
+    })
+  }, [repoSearch, repos])
+  const selectedSet = useMemo(() => new Set(selectedRepoIds), [selectedRepoIds])
+
+  useEffect(() => {
+    let cancelled = false
+
+    if (!isGitHub || !connected) {
+      setSelectedRepoIds([])
+      setRepos([])
+      setRepoTotal(null)
+      setRepoLanguages([])
+      setRepoSearch('')
+      return
+    }
+
+    setReposLoading(true)
+    integrationsApi.listGitHubRepos()
+      .then(data => {
+        if (cancelled) return
+        setRepos(data.repos)
+        setRepoTotal(data.total)
+        setRepoLanguages(data.topLanguages)
+        setSelectedRepoIds(data.selectedRepoIds.filter(id => data.repos.some(repo => repo.id === id)))
+      })
+      .catch(err => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Failed to load repositories')
+          const previouslySelected = Array.isArray(meta.selectedRepoIds) ? meta.selectedRepoIds : []
+          setSelectedRepoIds(previouslySelected)
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setReposLoading(false)
+      })
+
+    return () => { cancelled = true }
+  }, [connected, isGitHub, meta.selectedRepoIds])
 
   async function handleConnect() {
     setLoading('connect')
@@ -82,7 +144,7 @@ export default function IntegrationCard({
     setLoading('import')
     setError(null)
     try {
-      const res = await integrationsApi.importGitHub()
+      const res = await integrationsApi.importGitHub(selectedRepoIds)
       setResult(res.message)
       // Refresh nodes
       const graph = await nodesApi.getGraph()
@@ -94,6 +156,14 @@ export default function IntegrationCard({
     } finally {
       setLoading(null)
     }
+  }
+
+  function toggleRepo(repoId: number) {
+    setSelectedRepoIds(current =>
+      current.includes(repoId)
+        ? current.filter(id => id !== repoId)
+        : [...current, repoId]
+    )
   }
 
   async function handleImportLinkedIn() {
@@ -153,14 +223,94 @@ export default function IntegrationCard({
       {connected && isGitHub && (
         <div className="mb-4 space-y-1.5">
           <p className="text-sm text-white/60">
-            <span className="text-white font-medium">{(meta.totalRepos as number) ?? 0}</span> repos
-            {((meta.topLanguages as string[] | undefined) ?? []).length > 0 ? (
-              <> · <span className="text-white font-medium">{(meta.topLanguages as string[]).join(', ')}</span></>
+            <span className="text-white font-medium">{repoTotal ?? (meta.totalRepos as number) ?? 0}</span> repos
+            {displayLanguages.length > 0 ? (
+              <> · <span className="text-white font-medium">{displayLanguages.join(', ')}</span></>
             ) : null}
           </p>
           <p className="text-xs text-white/30">
-            Imports all your GitHub repositories (non-forks) as project nodes
+            Choose which repositories become project nodes in your graph
           </p>
+        </div>
+      )}
+
+      {connected && isGitHub && (
+        <div className="mb-4 space-y-3">
+          <div className="flex gap-2">
+            <input
+              type="search"
+              value={repoSearch}
+              onChange={e => setRepoSearch(e.target.value)}
+              placeholder="Search repositories"
+              className="min-w-0 flex-1 rounded-xl bg-space-700 border border-white/10 text-white px-3 py-2 text-sm focus:outline-none focus:border-brand-500"
+            />
+            <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/50 flex items-center whitespace-nowrap">
+              {selectedRepoIds.length} selected
+            </span>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setSelectedRepoIds(publicRepos.map(repo => repo.id))}
+              className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-xs text-white/70 hover:text-white transition-colors"
+            >
+              Select all public
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedRepoIds([])}
+              className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-white/50 hover:text-white transition-colors"
+            >
+              Select none
+            </button>
+          </div>
+
+          <div className="max-h-64 overflow-y-auto rounded-xl border border-white/10 bg-space-900/60 divide-y divide-white/5">
+            {reposLoading ? (
+              <div className="px-3 py-8 text-center text-sm text-white/35">
+                Loading repositories…
+              </div>
+            ) : filteredRepos.length > 0 ? (
+              filteredRepos.map(repo => (
+                <label
+                  key={repo.id}
+                  className="flex gap-3 px-3 py-3 hover:bg-white/[0.03] cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedSet.has(repo.id)}
+                    onChange={() => toggleRepo(repo.id)}
+                    className="mt-1 h-4 w-4 rounded border-white/20 bg-space-800 text-brand-500 focus:ring-brand-500"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-2">
+                      <span className="truncate text-sm font-medium text-white">{repo.name}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide ${
+                        repo.private
+                          ? 'bg-amber-400/10 text-amber-300'
+                          : 'bg-emerald-400/10 text-emerald-300'
+                      }`}>
+                        {repo.private ? 'Private' : 'Public'}
+                      </span>
+                    </span>
+                    <span className="block truncate text-xs text-white/35">{repo.full_name}</span>
+                    {repo.description && (
+                      <span className="mt-1 block line-clamp-2 text-xs text-white/45">{repo.description}</span>
+                    )}
+                    <span className="mt-1 flex items-center gap-2 text-[11px] text-white/30">
+                      {repo.language && <span>{repo.language}</span>}
+                      <span>{repo.stargazers_count} stars</span>
+                    </span>
+                  </span>
+                </label>
+              ))
+            ) : (
+              <div className="px-3 py-8 text-center text-sm text-white/35">
+                No repositories match your search.
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -242,7 +392,7 @@ export default function IntegrationCard({
           )}
           <button
             onClick={isGitHub ? handleImportGitHub : handleImportLinkedIn}
-            disabled={loading === 'import'}
+            disabled={loading === 'import' || (isGitHub && (reposLoading || selectedRepoIds.length === 0))}
             className={`flex-1 py-2.5 rounded-xl font-medium text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 ${
               isGitHub
                 ? 'bg-white/15 hover:bg-white/25 text-white'
@@ -251,7 +401,9 @@ export default function IntegrationCard({
           >
             {loading === 'import' ? (
               <><div className="w-3.5 h-3.5 border-2 border-current/30 border-t-current rounded-full animate-spin" /> Importing…</>
-            ) : '✨ Import to graph'}
+            ) : isGitHub
+              ? `Import selected${selectedRepoIds.length ? ` (${selectedRepoIds.length})` : ''}`
+              : '✨ Import to graph'}
           </button>
         </div>
       )}

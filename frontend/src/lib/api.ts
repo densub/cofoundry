@@ -1,5 +1,5 @@
 import { getAuthHeader } from './supabase'
-import { KNode, KEdge, Profile, NodeType, Message, UserMatch, MatchInsights, MatchedNodePair } from '../types'
+import { KNode, KEdge, Profile, NodeType, Message, UserMatch, MatchInsights, MatchedNodePair, GitHubRepo } from '../types'
 
 const BASE = '/api'
 
@@ -127,13 +127,25 @@ export const chatApi = {
 export interface Integration {
   provider: 'github' | 'linkedin'
   provider_username: string | null
-  metadata: Record<string, unknown>
+  metadata: Record<string, unknown> & {
+    totalRepos?: number
+    topLanguages?: string[]
+    selectedRepoIds?: number[]
+  }
   synced_at: string | null
 }
 
 export interface IntegrationsStatus {
   github: boolean
   linkedin: boolean
+}
+
+export interface GitHubReposResponse {
+  repos: GitHubRepo[]
+  selectedRepoIds: number[]
+  total: number
+  topLanguages: string[]
+  synced_at: string
 }
 
 export const integrationsApi = {
@@ -149,9 +161,14 @@ export const integrationsApi = {
   disconnect: (provider: 'github' | 'linkedin') =>
     request<void>(`/integrations/${provider}`, { method: 'DELETE' }),
 
-  importGitHub: () =>
-    request<{ created: { projects: number }; message: string }>(
-      '/integrations/github/import', { method: 'POST' }
+  listGitHubRepos: () => request<GitHubReposResponse>('/integrations/github/repos'),
+
+  importGitHub: (repoIds: number[]) =>
+    request<{ created: { projects: number }; selected: number; total: number; alreadyInGraph: number; message: string }>(
+      '/integrations/github/import', {
+        method: 'POST',
+        body: JSON.stringify({ repoIds }),
+      }
     ),
 
   importLinkedIn: (data: { manualAbout?: string; manualSkills?: string }) =>

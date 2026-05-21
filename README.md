@@ -4,7 +4,7 @@ Find collaborators who actually build what you build. CoFoundry connects your Gi
 
 ## Features
 
-- **GitHub-powered onboarding** — Import repos; your graph is built from real projects, not manual tags.
+- **GitHub-powered onboarding** — Select which repos to import; your graph is built from real projects, not manual tags.
 - **Interactive knowledge graph** — Explore projects as a force-directed bubble map on the dashboard.
 - **Smart matching** — Semantic similarity over project nodes (OpenAI embeddings) plus cached AI insights (Claude).
 - **Integrations** — GitHub OAuth for import/sync; LinkedIn OAuth scaffold for future profile enrichment.
@@ -91,8 +91,10 @@ cp frontend/.env.example frontend/.env
 3. Supabase → **Authentication** → **URL Configuration** → add redirect URLs, e.g.  
    `http://localhost:5173/auth/callback` (and your production URL when deployed).
 
-**GitHub OAuth (repo import — separate app or same app with a second callback):**  
+**GitHub OAuth (repo listing/import — separate app or same app with a second callback):**
 `http://localhost:3001/api/integrations/github/callback`
+
+Repo selection happens inside CoFoundry after OAuth. For GitHub-native per-repository authorization, migrate this integration to a GitHub App.
 
 Never commit `.env` files — they are listed in `.gitignore`.
 

@@ -1,5 +1,19 @@
 export type NodeType = 'root' | 'project' | 'interest' | 'skill' | 'expertise' | 'idea' | 'custom'
 
+export interface GitHubRepo {
+  id: number
+  name: string
+  full_name: string
+  description: string | null
+  html_url: string
+  stargazers_count: number
+  fork: boolean
+  private: boolean
+  language: string | null
+  topics: string[]
+  updated_at: string
+}
+
 export interface KNode {
   id: string
   user_id: string

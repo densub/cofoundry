@@ -47,10 +47,22 @@ export default function OnboardingPage() {
     const oauthError = searchParams.get('error')
     if (connected === 'github') {
       setGithubConnected(true)
+      setRootReady(true)
+      setStep('integrations')
       setToast('GitHub connected')
+      integrationsApi.list().then(list => {
+        const gh = list.find(i => i.provider === 'github')
+        setGithubIntegration(gh)
+        setGithubConnected(!!gh)
+      }).catch(() => {})
+      nodesApi.getGraph().then(g => {
+        setProjectCount(g.nodes.filter(n => n.type === 'project').length)
+      }).catch(() => {})
       setSearchParams({})
     } else if (oauthError) {
       setError('GitHub connection failed — try again')
+      setRootReady(true)
+      setStep('integrations')
       setSearchParams({})
     }
   }, [searchParams, setSearchParams])
@@ -95,26 +107,15 @@ export default function OnboardingPage() {
       setError('Connect GitHub to import your projects')
       return
     }
-
-    setStep('generating')
-    setError('')
-
-    try {
-      await integrationsApi.importGitHub()
-      const count = await refreshProjectCount()
-      if (count === 0) {
-        setError('No projects were imported — try Import on GitHub again')
-        setStep('integrations')
-        return
-      }
-      navigate('/dashboard')
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to import GitHub projects')
-      setStep('integrations')
+    if (projectCount === 0) {
+      setError('Select and import at least one GitHub repository')
+      return
     }
+
+    navigate('/dashboard')
   }
 
-  const canFinish = rootReady && githubConnected
+  const canFinish = rootReady && githubConnected && projectCount > 0
 
   return (
     <div className="min-h-screen bg-space-950 flex items-center justify-center px-4 py-12">
@@ -162,7 +163,7 @@ export default function OnboardingPage() {
               <div className="space-y-5">
                 <h2 className="text-xl font-semibold text-white">Tell us about yourself</h2>
                 <p className="text-white/40 text-sm -mt-2">
-                  Next you will connect GitHub — we import your repositories as project nodes (no manual tags).
+                  Next you will connect GitHub and choose which repositories become project nodes.
                 </p>
 
                 <div>
@@ -210,7 +211,7 @@ export default function OnboardingPage() {
                 <div>
                   <h2 className="text-xl font-semibold text-white">Import your projects</h2>
                   <p className="text-white/40 text-sm mt-1">
-                    Connect GitHub and import repos. Your graph only includes projects — not skills or interests.
+                    Connect GitHub and choose which repos become project nodes.
                   </p>
                 </div>
 
@@ -257,7 +258,7 @@ export default function OnboardingPage() {
                     disabled={!canFinish}
                     className="flex-1 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 disabled:opacity-40 font-medium text-sm transition-colors"
                   >
-                    {projectCount > 0 ? 'Go to dashboard →' : 'Import projects & finish'}
+                    {projectCount > 0 ? 'Go to dashboard →' : 'Import selected projects first'}
                   </button>
                 </div>
               </div>

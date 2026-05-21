@@ -6,6 +6,7 @@ export interface GitHubRepo {
   html_url: string
   stargazers_count: number
   fork: boolean
+  private: boolean
   language: string | null
   topics: string[]
   updated_at: string
@@ -61,13 +62,14 @@ export async function fetchAllUserRepos(token: string): Promise<GitHubRepo[]> {
   return allRepos.filter(r => !r.fork)
 }
 
+export async function fetchGitHubUser(token: string): Promise<GitHubProfile> {
+  const res = await fetch('https://api.github.com/user', { headers: githubHeaders(token) })
+  if (!res.ok) throw new Error(`GitHub user fetch failed: ${res.status}`)
+  return (await res.json()) as GitHubProfile
+}
+
 export async function fetchGitHubData(token: string): Promise<GitHubData> {
-  const headers = githubHeaders(token)
-
-  const userRes = await fetch('https://api.github.com/user', { headers })
-  if (!userRes.ok) throw new Error(`GitHub user fetch failed: ${userRes.status}`)
-
-  const user = (await userRes.json()) as GitHubProfile
+  const user = await fetchGitHubUser(token)
   const ownRepos = await fetchAllUserRepos(token)
   const byStars = [...ownRepos].sort((a, b) => b.stargazers_count - a.stargazers_count)
 

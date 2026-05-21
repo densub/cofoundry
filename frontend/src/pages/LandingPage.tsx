@@ -23,7 +23,7 @@ export default function LandingPage() {
         </h1>
 
         <p className="text-lg text-fg-muted max-w-xl mb-10 leading-relaxed">
-          CoFoundry imports your repos, maps them as a project graph, and matches you with
+          CoFoundry maps selected repos as a project graph and matches you with
           builders working on similar code — friendly, focused, and developer-first.
         </p>
 
@@ -44,7 +44,7 @@ export default function LandingPage() {
             {
               icon: '◆',
               title: 'Connect GitHub',
-              desc: 'Onboarding pulls in your repositories as project nodes. No manual skill tags.',
+              desc: 'Choose the repositories that should become project nodes. No manual skill tags.',
             },
             {
               icon: '◎',
