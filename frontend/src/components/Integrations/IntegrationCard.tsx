@@ -159,7 +159,7 @@ export default function IntegrationCard({
             ) : null}
           </p>
           <p className="text-xs text-white/30">
-            Imports up to 8 repositories as project nodes in your graph
+            Imports all your GitHub repositories (non-forks) as project nodes
           </p>
         </div>
       )}

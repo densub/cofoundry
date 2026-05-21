@@ -63,4 +63,24 @@ router.post('/onboard', async (req: AuthRequest, res: Response): Promise<void> =
   }
 })
 
+// Permanently delete auth user + all app data (DB cascades from profiles / auth.users)
+router.post('/delete-account', async (req: AuthRequest, res: Response): Promise<void> => {
+  const { confirm } = req.body as { confirm?: string }
+  if (confirm !== 'DELETE') {
+    res.status(400).json({ error: 'Type DELETE in confirm to permanently delete your account' })
+    return
+  }
+
+  const userId = req.userId!
+  const { error } = await supabaseAdmin.auth.admin.deleteUser(userId)
+
+  if (error) {
+    console.error('Delete account error:', error)
+    res.status(500).json({ error: 'Failed to delete account' })
+    return
+  }
+
+  res.status(204).send()
+})
+
 export default router

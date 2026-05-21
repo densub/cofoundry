@@ -1,0 +1,11 @@
+# Copy to domain-contact.yaml (gitignored) and fill in before registering a domain.
+allContacts:
+  email: 'you@example.com'
+  phoneNumber: '+1.5555555555'
+  postalAddress:
+    regionCode: 'US'
+    postalCode: '00000'
+    administrativeArea: 'TX'
+    locality: 'Your City'
+    addressLines: ['123 Example St']
+    recipients: ['Your Name']

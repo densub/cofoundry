@@ -3,10 +3,12 @@ import { useAuth } from './hooks/useAuth'
 import Layout from './components/Layout/Layout'
 import LandingPage from './pages/LandingPage'
 import AuthPage from './pages/AuthPage'
+import AuthCallbackPage from './pages/AuthCallbackPage'
 import OnboardingPage from './pages/OnboardingPage'
 import DashboardPage from './pages/DashboardPage'
 import MatchesPage from './pages/MatchesPage'
 import IntegrationsPage from './pages/IntegrationsPage'
+import SettingsPage from './pages/SettingsPage'
 import { useStore } from './store/useStore'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -43,12 +45,14 @@ export default function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/auth" element={<AuthRoute><AuthPage /></AuthRoute>} />
+        <Route path="/auth/callback" element={<AuthCallbackPage />} />
         <Route path="/onboarding" element={<OnboardingPage />} />
 
         <Route element={<Layout />}>
           <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
           <Route path="/matches" element={<ProtectedRoute><MatchesPage /></ProtectedRoute>} />
           <Route path="/integrations" element={<ProtectedRoute><IntegrationsPage /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

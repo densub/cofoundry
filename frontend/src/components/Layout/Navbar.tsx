@@ -12,6 +12,7 @@ export default function Navbar() {
     { to: '/dashboard', label: 'My Graph' },
     { to: '/matches', label: 'Matches' },
     { to: '/integrations', label: 'Integrations' },
+    { to: '/settings', label: 'Settings' },
   ]
 
   return (

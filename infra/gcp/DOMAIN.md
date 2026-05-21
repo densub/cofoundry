@@ -1,57 +1,64 @@
-# CoFoundry domain (budget: under $15/year)
+# CoFoundry domain
 
-## Recommendation: **cofoundry.app** ($14/year via Google Cloud Domains)
+## Registered: **cofoundry.app** ($14/year)
 
-Searched with `gcloud domains registrations search-domains cofoundry` on project `cofoundry-497002`:
+- State: **ACTIVE** (expires ~2027-05-21)
+- DNS zone: `cofoundry-app` (Cloud DNS)
+- Cloud Run mappings:
+  - `https://cofoundry.app` → `cofoundry-web`
+  - `https://www.cofoundry.app` → `cofoundry-web`
+  - `https://api.cofoundry.app` → `cofoundry-api`
 
-| Domain | Price (Google) | Notes |
-|--------|----------------|-------|
-| **cofoundry.app** | **$14/year** | Exact brand match, under budget |
-| co-foundry.dev | $12/year | Hyphenated, still on-brand |
-| cofoundry.info | $12/year | Cheaper, weaker for a product |
-| cofoundry.io | $60/year | Over budget |
+SSL certificates provision automatically after DNS propagates (often 15–60 minutes).
 
-`cofoundry.dev` did not appear as available in this search.
+## Production URLs
 
-Register at **[Porkbun](https://porkbun.com)** or **[Cloudflare Registrar](https://www.cloudflare.com/products/registrar/)** (at-cost renewals, no markup).
+| Purpose | URL |
+|---------|-----|
+| App | https://cofoundry.app |
+| API | https://api.cofoundry.app |
+| GitHub OAuth callback | https://api.cofoundry.app/api/integrations/github/callback |
 
-## Search availability (CLI)
+Cloud Run env (already set on services):
+
+- `FRONTEND_URL=https://cofoundry.app`
+- `APP_URL=https://api.cofoundry.app`
+- `BACKEND_URL=https://api.cofoundry.app` (frontend nginx proxy)
+
+## GitHub OAuth app
+
+Update at https://github.com/settings/developers:
+
+- Homepage: `https://cofoundry.app`
+- Authorization callback: `https://api.cofoundry.app/api/integrations/github/callback`
+
+## Register another domain (CLI)
+
+Contact file is gitignored. Copy the example:
 
 ```bash
-gcloud config set project cofoundry-497002
-gcloud domains registrations search-domains cofoundry
-```
+cp infra/gcp/domain-contact.example.yaml infra/gcp/domain-contact.yaml
+# edit domain-contact.yaml with your ICANN contact info
 
-## Register via Google Cloud Domains (optional)
+gcloud dns managed-zones create cofoundry-app --dns-name=cofoundry.app. --project=cofoundry-497002
 
-```bash
-# After search shows availability:
-gcloud domains registrations register cofoundry.dev \
+gcloud domains registrations register cofoundry.app \
   --contact-data-from-file=infra/gcp/domain-contact.yaml \
-  --quiet
+  --contact-privacy=redacted-contact-data \
+  --yearly-price="14.00 USD" \
+  --cloud-dns-zone=cofoundry-app \
+  --notices=hsts-preloaded \
+  --project=cofoundry-497002
 ```
 
-## Point domain to Cloud Run (after deploy)
+## ICANN
+
+Verify the registrant email within **15 days** or the domain may be suspended.
+
+## CI/CD trigger (still manual)
+
+After GitHub OAuth in Cloud Console:
 
 ```bash
-# Get frontend service URL
-WEB_URL=$(gcloud run services describe cofoundry-web \
-  --region=us-central1 --format='value(status.url)')
-
-# Map custom domain (requires domain verified in Cloud Run)
-gcloud run domain-mappings create \
-  --service=cofoundry-web \
-  --domain=www.cofoundry.dev \
-  --region=us-central1
+./infra/gcp/create-trigger.sh
 ```
-
-Follow the DNS records Cloud Run prints (usually CNAME to `ghs.googlehosted.com`).
-
-## GitHub OAuth (production)
-
-Update GitHub OAuth app:
-
-- Homepage: `https://www.cofoundry.dev` (or your Cloud Run URL until DNS is live)
-- Callback: `https://<BACKEND_CLOUD_RUN_URL>/api/integrations/github/callback`
-
-Set `APP_URL` and `FRONTEND_URL` in Secret Manager / backend env to match production URLs.

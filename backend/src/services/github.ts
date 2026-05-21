@@ -22,34 +22,55 @@ export interface GitHubProfile {
 
 export interface GitHubData {
   user: GitHubProfile
+  /** All non-fork repos owned by the user (paginated from GitHub) */
+  repos: GitHubRepo[]
   topRepos: GitHubRepo[]
   topLanguages: string[]
   languageCounts: Record<string, number>
   totalRepos: number
 }
 
-export async function fetchGitHubData(token: string): Promise<GitHubData> {
-  const headers = {
+function githubHeaders(token: string): Record<string, string> {
+  return {
     Authorization: `Bearer ${token}`,
     'User-Agent': 'CoFoundry-App',
     Accept: 'application/vnd.github+json',
   }
+}
 
-  const [userRes, reposRes] = await Promise.all([
-    fetch('https://api.github.com/user', { headers }),
-    fetch('https://api.github.com/user/repos?sort=updated&per_page=100&type=owner', { headers }),
-  ])
+/** Fetch every page of the user's owned repos (non-forks). */
+export async function fetchAllUserRepos(token: string): Promise<GitHubRepo[]> {
+  const headers = githubHeaders(token)
+  const allRepos: GitHubRepo[] = []
+  const maxPages = 10 // up to 1000 repos
 
+  for (let page = 1; page <= maxPages; page++) {
+    const res = await fetch(
+      `https://api.github.com/user/repos?sort=updated&per_page=100&type=owner&page=${page}`,
+      { headers },
+    )
+    if (!res.ok) {
+      throw new Error(`GitHub repos fetch failed: ${res.status}`)
+    }
+    const batch = (await res.json()) as GitHubRepo[]
+    if (batch.length === 0) break
+    allRepos.push(...batch)
+    if (batch.length < 100) break
+  }
+
+  return allRepos.filter(r => !r.fork)
+}
+
+export async function fetchGitHubData(token: string): Promise<GitHubData> {
+  const headers = githubHeaders(token)
+
+  const userRes = await fetch('https://api.github.com/user', { headers })
   if (!userRes.ok) throw new Error(`GitHub user fetch failed: ${userRes.status}`)
 
-  const user = await userRes.json() as GitHubProfile
-  const allRepos: GitHubRepo[] = reposRes.ok ? (await reposRes.json() as GitHubRepo[]) : []
+  const user = (await userRes.json()) as GitHubProfile
+  const ownRepos = await fetchAllUserRepos(token)
+  const byStars = [...ownRepos].sort((a, b) => b.stargazers_count - a.stargazers_count)
 
-  const ownRepos = allRepos
-    .filter(r => !r.fork)
-    .sort((a, b) => b.stargazers_count - a.stargazers_count)
-
-  // Aggregate primary languages across all repos
   const languageCounts: Record<string, number> = {}
   for (const repo of ownRepos) {
     if (repo.language) {
@@ -64,7 +85,8 @@ export async function fetchGitHubData(token: string): Promise<GitHubData> {
 
   return {
     user,
-    topRepos: ownRepos.slice(0, 6),
+    repos: ownRepos,
+    topRepos: byStars.slice(0, 6),
     topLanguages,
     languageCounts,
     totalRepos: ownRepos.length,

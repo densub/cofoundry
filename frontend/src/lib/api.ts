@@ -17,6 +17,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const err = await res.json().catch(() => ({ error: res.statusText }))
     throw new Error(err.error ?? 'Request failed')
   }
+  if (res.status === 204 || res.headers.get('content-length') === '0') {
+    return undefined as T
+  }
   return res.json()
 }
 
@@ -35,6 +38,12 @@ export const profileApi = {
     method: 'POST',
     body: JSON.stringify(data),
   }),
+
+  deleteAccount: () =>
+    request<void>('/profile/delete-account', {
+      method: 'POST',
+      body: JSON.stringify({ confirm: 'DELETE' }),
+    }),
 }
 
 // ── Nodes ─────────────────────────────────────────────────────────────────────

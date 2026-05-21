@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { getAuthCallbackUrl } from '../lib/authRedirect'
 import { profileApi } from '../lib/api'
 import { useStore } from '../store/useStore'
 
@@ -46,10 +47,28 @@ export function useAuth() {
     if (error) throw error
   }
 
+  async function signInWithGitHub() {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'github',
+      options: {
+        redirectTo: getAuthCallbackUrl(),
+        scopes: 'read:user user:email',
+      },
+    })
+    if (error) throw error
+  }
+
   async function signOut() {
     await supabase.auth.signOut()
     setProfile(null)
   }
 
-  return { user, loading, signUp, signIn, signOut }
+  async function deleteAccount() {
+    await profileApi.deleteAccount()
+    await supabase.auth.signOut()
+    setProfile(null)
+    setUser(null)
+  }
+
+  return { user, loading, signUp, signIn, signInWithGitHub, signOut, deleteAccount }
 }

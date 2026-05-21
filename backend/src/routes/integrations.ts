@@ -163,6 +163,7 @@ router.get('/github/callback', async (req: Request, res: Response): Promise<void
         provider_user_id: String(ghData.user.id),
         provider_username: ghData.user.login,
         metadata: {
+          repos: ghData.repos,
           topRepos: ghData.topRepos,
           topLanguages: ghData.topLanguages,
           languageCounts: ghData.languageCounts,
@@ -192,6 +193,10 @@ router.post('/github/import', authMiddleware, async (req: AuthRequest, res: Resp
     .single()
 
   if (!integration) { res.status(404).json({ error: 'GitHub not connected' }); return }
+  if (!integration.access_token) {
+    res.status(400).json({ error: 'GitHub token missing — reconnect GitHub' })
+    return
+  }
 
   try {
     const rootNodeId = await getRootNodeId(req.userId!)
@@ -200,18 +205,26 @@ router.post('/github/import', authMiddleware, async (req: AuthRequest, res: Resp
       return
     }
 
-    const { topRepos } = integration.metadata as { topRepos: GitHubRepo[] }
+    // Always refresh from GitHub so new repos appear on re-import
+    const ghData = await fetchGitHubData(integration.access_token)
+    const repos = ghData.repos
+
+    const { data: existingProjects } = await supabaseAdmin
+      .from('nodes')
+      .select('title, metadata')
+      .eq('user_id', req.userId)
+      .eq('type', 'project')
+
+    const existingKeys = new Set(
+      (existingProjects ?? []).map(n => {
+        const gh = (n.metadata as { github?: { full_name?: string } })?.github
+        return gh?.full_name ?? n.title
+      }),
+    )
 
     const projectResults = await Promise.allSettled(
-      topRepos.slice(0, 8).map(async (repo: GitHubRepo) => {
-        const { data: existing } = await supabaseAdmin
-          .from('nodes')
-          .select('id')
-          .eq('user_id', req.userId)
-          .eq('title', repo.name)
-          .eq('type', 'project')
-          .maybeSingle()
-        if (existing) return null
+      repos.map(async (repo: GitHubRepo) => {
+        if (existingKeys.has(repo.full_name)) return null
 
         const body = githubProjectBody(repo)
         return createNode(req.userId!, {
@@ -232,17 +245,43 @@ router.post('/github/import', authMiddleware, async (req: AuthRequest, res: Resp
             },
           },
         })
-      })
+      }),
     )
 
     const projects = projectResults.filter(r => r.status === 'fulfilled' && r.value).length
+    const alreadyInGraph = projectResults.filter(
+      r => r.status === 'fulfilled' && r.value === null,
+    ).length
+    const failed = projectResults.filter(r => r.status === 'rejected').length
+    if (failed > 0) {
+      console.warn(`GitHub import: ${failed} repo(s) failed to create`)
+    }
+
+    const priorMeta = (integration.metadata ?? {}) as Record<string, unknown>
+    await supabaseAdmin
+      .from('integrations')
+      .update({
+        metadata: {
+          ...priorMeta,
+          repos: ghData.repos,
+          topRepos: ghData.topRepos,
+          topLanguages: ghData.topLanguages,
+          languageCounts: ghData.languageCounts,
+          totalRepos: ghData.totalRepos,
+          synced_at: new Date().toISOString(),
+        },
+      })
+      .eq('user_id', req.userId)
+      .eq('provider', 'github')
 
     res.json({
       created: { projects },
+      total: repos.length,
+      alreadyInGraph,
       message:
         projects > 0
-          ? `Imported ${projects} GitHub ${projects === 1 ? 'project' : 'projects'} into your graph`
-          : 'Your GitHub projects are already in your graph',
+          ? `Imported ${projects} GitHub ${projects === 1 ? 'project' : 'projects'} (${repos.length} repos on GitHub)`
+          : `All ${repos.length} GitHub ${repos.length === 1 ? 'project is' : 'projects are'} already in your graph`,
     })
   } catch (err) {
     console.error('GitHub import error:', err)
