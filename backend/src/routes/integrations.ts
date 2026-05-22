@@ -2,6 +2,7 @@ import crypto from 'crypto'
 import { Router, Request, Response } from 'express'
 import { authMiddleware, AuthRequest } from '../middleware/auth'
 import { supabaseAdmin } from '../lib/supabase'
+import { getGithubClientId, getGithubClientSecret } from '../lib/githubOAuth'
 import { getSupabaseServiceRoleKey } from '../lib/supabaseConfig'
 import { fetchGitHubData, GitHubRepo } from '../services/github'
 import { fetchLinkedInProfile } from '../services/linkedin'
@@ -41,7 +42,7 @@ function isOAuthConfigured(clientId?: string, clientSecret?: string): boolean {
 
 function oauthStatus() {
   return {
-    github: isOAuthConfigured(process.env.GITHUB_CLIENT_ID, process.env.GITHUB_CLIENT_SECRET),
+    github: isOAuthConfigured(getGithubClientId(), getGithubClientSecret()),
     linkedin: isOAuthConfigured(process.env.LINKEDIN_CLIENT_ID, process.env.LINKEDIN_CLIENT_SECRET),
   }
 }
@@ -108,7 +109,7 @@ router.get('/status', (_req: Request, res: Response): void => {
 router.get('/github/url', authMiddleware, (req: AuthRequest, res: Response): void => {
   if (!oauthStatus().github) {
     res.status(503).json({
-      error: 'GitHub is not enabled yet. The app administrator must add GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to the server.',
+      error: 'GitHub is not enabled yet. The app administrator must add GITHUB_CLIENT_ID_TEST/PROD and GITHUB_CLIENT_SECRET_TEST/PROD to the server.',
     })
     return
   }
@@ -118,7 +119,7 @@ router.get('/github/url', authMiddleware, (req: AuthRequest, res: Response): voi
       : '/integrations'
   const state = signState(req.userId!, 'github', returnTo)
   const params = new URLSearchParams({
-    client_id: process.env.GITHUB_CLIENT_ID!,
+    client_id: getGithubClientId()!,
     scope: 'read:user repo',
     state,
   })
@@ -142,8 +143,8 @@ router.get('/github/callback', async (req: Request, res: Response): Promise<void
       method: 'POST',
       headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        client_id: process.env.GITHUB_CLIENT_ID,
-        client_secret: process.env.GITHUB_CLIENT_SECRET,
+        client_id: getGithubClientId(),
+        client_secret: getGithubClientSecret(),
         code,
       }),
     })

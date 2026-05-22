@@ -73,7 +73,9 @@ cp frontend/.env.example frontend/.env
 | `SUPABASE_DB_TEST_PASSWORD` | Test DB password (optional; leave empty) |
 | `ANTHROPIC_API_KEY` | Claude API key |
 | `OPENAI_API_KEY` | Embeddings for matching |
-| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | GitHub OAuth |
+| `GITHUB_CLIENT_ID_PROD` / `GITHUB_CLIENT_SECRET_PROD` | GitHub OAuth (production) |
+| `GITHUB_CLIENT_ID_TEST` / `GITHUB_CLIENT_SECRET_TEST` | GitHub OAuth (local / `SUPABASE_ENV=TEST`) |
+| `SENDGRID_API_KEY` / `SENDGRID_FROM_EMAIL` | Email invites for external GitHub users |
 | `FRONTEND_URL` | e.g. `http://localhost:5173` |
 | `APP_URL` | e.g. `http://localhost:3001` |
 

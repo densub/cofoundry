@@ -49,6 +49,7 @@ export interface NodeOperation {
 export interface MatchedNodePair {
   myNodeId: string
   myNodeTitle: string
+  myNodeType: string
   theirNodeId: string
   theirNodeTitle: string
   theirNodeType: string
@@ -56,13 +57,111 @@ export interface MatchedNodePair {
 }
 
 export interface UserMatch {
+  matchId?: string
   userId: string
   displayName: string | null
   role: string | null
   avatarUrl: string | null
   score: number
   matchedNodes: MatchedNodePair[]
+  connectionStatus?: 'connected' | 'incoming' | 'requested' | null
   cached?: boolean
+}
+
+export interface ConnectionProfile {
+  id: string
+  username: string | null
+  display_name: string | null
+  role: string | null
+  bio: string | null
+  avatar_url: string | null
+}
+
+export interface ConnectionRequest {
+  id: string
+  requester_id: string
+  recipient_id: string
+  status: string
+  created_at: string
+  updated_at: string
+  user: ConnectionProfile | null
+}
+
+export interface Connection {
+  id: string
+  created_at: string
+  user: ConnectionProfile | null
+}
+
+export interface ExternalInvite {
+  id: string
+  github_login: string
+  github_profile_url: string
+  email: string
+  status: string
+  created_at: string
+}
+
+export interface ConnectionsSummary {
+  connections: Connection[]
+  incomingRequests: ConnectionRequest[]
+  outgoingRequests: ConnectionRequest[]
+  externalInvites: ExternalInvite[]
+}
+
+export interface ConnectionsNetworkGraph {
+  me: ConnectionProfile | null
+  connections: ConnectionProfile[]
+  secondDegreeConnections?: ConnectionProfile[]
+  links: Array<{ source: string; target: string }>
+}
+
+export interface ConnectionGraphSlice {
+  nodes: KNode[]
+  edges: KEdge[]
+}
+
+export interface ConnectionPairGraph {
+  user: ConnectionProfile | null
+  score: number
+  matchedNodes: MatchedNodePair[]
+  my: ConnectionGraphSlice
+  their: ConnectionGraphSlice
+  matchEdges?: KEdge[]
+}
+
+export interface AppUserSearchResult extends ConnectionProfile {
+  connectionStatus: 'connected' | 'incoming' | 'requested' | null
+  githubUsername: string | null
+}
+
+export interface GitHubUserSearchResult {
+  id: number
+  login: string
+  name: string | null
+  bio: string | null
+  email: string | null
+  avatar_url: string
+  html_url: string
+  public_repos: number
+}
+
+export interface GitHubCollaboratorMatch extends GitHubUserSearchResult {
+  score: number
+  matchedRepos: Array<{
+    myRepo: string
+    githubRepo: string
+    githubRepoUrl: string
+    language: string | null
+    topics: string[]
+    stars: number
+    reason: string
+  }>
+}
+
+export interface ConnectionsSearchResult {
+  appUsers: AppUserSearchResult[]
+  githubUsers: GitHubUserSearchResult[]
 }
 
 export interface ProjectOverlap {

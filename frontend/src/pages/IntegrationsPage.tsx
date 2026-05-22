@@ -58,10 +58,10 @@ export default function IntegrationsPage() {
   const linkedin = integrations.find(i => i.provider === 'linkedin')
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-10">
+    <div className="max-w-2xl mx-auto px-3 sm:px-4 py-6 sm:py-10">
       {/* Toast */}
       {toast && (
-        <div className={`fixed top-20 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl text-sm font-medium shadow-lg animate-fade-in ${
+        <div className={`fixed top-20 left-3 right-3 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-50 px-5 py-3 rounded-xl text-sm font-medium shadow-lg animate-fade-in ${
           toast.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'
         }`}>
           {toast.message}

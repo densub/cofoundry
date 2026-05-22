@@ -1,6 +1,13 @@
 import { Router, Response } from 'express'
 import { authMiddleware, AuthRequest } from '../middleware/auth'
 import { supabaseAdmin } from '../lib/supabase'
+import { ConnectionStatus, getConnectionStates } from '../services/connectionState'
+import {
+  fetchPublicGitHubUser,
+  GitHubRepo,
+  PublicGitHubRepo,
+  searchPublicGitHubRepos,
+} from '../services/github'
 import { generateMatchInsights, MatchInsights } from '../services/llm'
 import { projectContextFromNode } from '../services/projectContext'
 import {
@@ -26,13 +33,36 @@ interface MatchedNode {
 const MAX_PROJECT_PAIRS = 3
 
 interface UserMatch {
+  matchId?: string
   userId: string
   displayName: string | null
   role: string | null
   avatarUrl: string | null
   score: number
   matchedNodes: MatchedNode[]
+  connectionStatus?: ConnectionStatus
   cached?: boolean
+}
+
+interface GitHubCollaboratorMatch {
+  id: number
+  login: string
+  name: string | null
+  bio: string | null
+  email: string | null
+  avatar_url: string
+  html_url: string
+  public_repos: number
+  score: number
+  matchedRepos: Array<{
+    myRepo: string
+    githubRepo: string
+    githubRepoUrl: string
+    language: string | null
+    topics: string[]
+    stars: number
+    reason: string
+  }>
 }
 
 async function loadCachedMatches(userId: string): Promise<UserMatch[]> {
@@ -52,17 +82,20 @@ async function loadCachedMatches(userId: string): Promise<UserMatch[]> {
     .in('id', otherIds)
 
   const profileById = new Map((profiles ?? []).map(p => [p.id, p]))
+  const states = await getConnectionStates(userId, otherIds)
 
   return rows.map(row => {
     const p = profileById.get(row.user_id_2)
     const matchedNodes = (row.matched_nodes as MatchedNode[]) ?? []
     return {
+      matchId: row.id,
       userId: row.user_id_2,
       displayName: p?.display_name ?? null,
       role: p?.role ?? null,
       avatarUrl: p?.avatar_url ?? null,
       score: row.similarity_score,
       matchedNodes,
+      connectionStatus: states.get(row.user_id_2) ?? null,
       cached: true,
     }
   })
@@ -135,6 +168,7 @@ async function computeMatches(
     .from('profiles')
     .select('id, display_name, role, avatar_url')
     .in('id', userIds)
+  const states = await getConnectionStates(userId, userIds)
 
   for (const p of profiles ?? []) {
     const entry = matchMap.get(p.id)
@@ -143,6 +177,10 @@ async function computeMatches(
       entry.role = p.role
       entry.avatarUrl = p.avatar_url
     }
+  }
+  for (const id of userIds) {
+    const entry = matchMap.get(id)
+    if (entry) entry.connectionStatus = states.get(id) ?? null
   }
 
   return Array.from(matchMap.values())
@@ -182,6 +220,90 @@ async function persistMatches(userId: string, matches: UserMatch[], graphFingerp
       matches_cached_at: new Date().toISOString(),
     })
     .eq('id', userId)
+}
+
+function tokenize(value: string | null | undefined): string[] {
+  return (value ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9+#.\s-]/g, ' ')
+    .split(/[\s_-]+/)
+    .filter(token => token.length >= 3 && !['the', 'and', 'for', 'with', 'app', 'api'].includes(token))
+    .slice(0, 8)
+}
+
+function jaccard(a: Iterable<string>, b: Iterable<string>): number {
+  const left = new Set(Array.from(a).map(v => v.toLowerCase()).filter(Boolean))
+  const right = new Set(Array.from(b).map(v => v.toLowerCase()).filter(Boolean))
+  if (!left.size || !right.size) return 0
+  let intersection = 0
+  for (const value of left) if (right.has(value)) intersection += 1
+  return intersection / (left.size + right.size - intersection)
+}
+
+function repoQuery(repo: GitHubRepo): string | null {
+  const parts: string[] = []
+  if (repo.language) parts.push(`language:${repo.language}`)
+  const topic = repo.topics?.[0]
+  if (topic) parts.push(`topic:${topic}`)
+  const keyword = tokenize(`${repo.name} ${repo.description ?? ''}`)[0]
+  if (keyword) parts.push(keyword)
+  return parts.length >= 2 ? parts.join(' ') : null
+}
+
+function scoreCandidate(myRepo: GitHubRepo, candidate: PublicGitHubRepo): { score: number; reason: string } {
+  const languageScore =
+    myRepo.language && candidate.language && myRepo.language.toLowerCase() === candidate.language.toLowerCase()
+      ? 0.38
+      : 0
+  const topicScore = jaccard(myRepo.topics ?? [], candidate.topics ?? []) * 0.34
+  const keywordScore = jaccard(
+    tokenize(`${myRepo.name} ${myRepo.description ?? ''}`),
+    tokenize(`${candidate.name} ${candidate.description ?? ''}`),
+  ) * 0.18
+  const starsScore = Math.min(Math.log10((candidate.stargazers_count ?? 0) + 1) / 5, 1) * 0.06
+  const recencyScore = candidate.updated_at && Date.now() - Date.parse(candidate.updated_at) < 1000 * 60 * 60 * 24 * 365
+    ? 0.04
+    : 0
+  const score = languageScore + topicScore + keywordScore + starsScore + recencyScore
+  const signals = [
+    languageScore ? `same language (${candidate.language})` : null,
+    topicScore ? 'shared topics' : null,
+    keywordScore ? 'similar repo keywords' : null,
+    starsScore > 0.02 ? 'popular repo' : null,
+  ].filter(Boolean)
+  return { score, reason: signals.join(', ') || 'similar public repository' }
+}
+
+async function excludedGithubLogins(userId: string, currentLogin?: string | null): Promise<Set<string>> {
+  const [{ data: appIntegrations }, { data: invites }] = await Promise.all([
+    supabaseAdmin
+      .from('integrations')
+      .select('provider_username, user_id')
+      .eq('provider', 'github'),
+    supabaseAdmin
+      .from('external_invites')
+      .select('github_login')
+      .eq('inviter_id', userId),
+  ])
+
+  const appUserIds = (appIntegrations ?? [])
+    .map(row => row.user_id as string)
+    .filter(id => id !== userId)
+  const states = await getConnectionStates(userId, appUserIds)
+  const excluded = new Set<string>()
+  if (currentLogin) excluded.add(currentLogin.toLowerCase())
+  for (const row of appIntegrations ?? []) {
+    const login = String(row.provider_username ?? '').toLowerCase()
+    if (!login) continue
+    excluded.add(login)
+    const state = states.get(row.user_id as string)
+    if (state === 'connected' || state === 'requested' || state === 'incoming') excluded.add(login)
+  }
+  for (const invite of invites ?? []) {
+    const login = String(invite.github_login ?? '').toLowerCase()
+    if (login) excluded.add(login)
+  }
+  return excluded
 }
 
 // Find similar users based on node embeddings (cached unless ?refresh=true)
@@ -231,9 +353,105 @@ router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
 
   if (matches.length > 0) {
     await persistMatches(req.userId!, matches, graphFingerprint)
+    const saved = await loadCachedMatches(req.userId!)
+    res.json({ matches: saved.slice(0, limit), cached: false })
+    return
   }
 
   res.json({ matches, cached: false })
+})
+
+router.get('/github', async (req: AuthRequest, res: Response): Promise<void> => {
+  const limit = Math.min(parseInt(req.query.limit as string) || 10, 10)
+  const { data: integration } = await supabaseAdmin
+    .from('integrations')
+    .select('provider_username, access_token, metadata')
+    .eq('user_id', req.userId)
+    .eq('provider', 'github')
+    .maybeSingle()
+
+  const metadata = (integration?.metadata ?? {}) as {
+    repos?: GitHubRepo[]
+    topRepos?: GitHubRepo[]
+  }
+  const repos = (metadata.topRepos?.length ? metadata.topRepos : metadata.repos ?? [])
+    .filter(repo => repo && !repo.fork)
+    .slice(0, 5)
+
+  if (!repos.length) {
+    res.json({
+      matches: [],
+      message: 'Import GitHub projects first to find external GitHub collaborators',
+    })
+    return
+  }
+
+  const excludedLogins = await excludedGithubLogins(req.userId!, integration?.provider_username)
+  const candidates = new Map<string, {
+    login: string
+    score: number
+    matchedRepos: GitHubCollaboratorMatch['matchedRepos']
+  }>()
+
+  await Promise.all(
+    repos.map(async repo => {
+      const query = repoQuery(repo)
+      if (!query) return
+      const found = await searchPublicGitHubRepos(query, 8, integration?.access_token).catch(() => [])
+      for (const candidate of found) {
+        const login = candidate.owner.login.toLowerCase()
+        if (excludedLogins.has(login)) continue
+        const scored = scoreCandidate(repo, candidate)
+        if (scored.score <= 0.18) continue
+        const entry = candidates.get(login) ?? { login: candidate.owner.login, score: 0, matchedRepos: [] }
+        entry.score += scored.score
+        entry.matchedRepos.push({
+          myRepo: repo.full_name,
+          githubRepo: candidate.full_name,
+          githubRepoUrl: candidate.html_url,
+          language: candidate.language,
+          topics: (candidate.topics ?? []).slice(0, 5),
+          stars: candidate.stargazers_count ?? 0,
+          reason: scored.reason,
+        })
+        candidates.set(login, entry)
+      }
+    })
+  )
+
+  const ranked = Array.from(candidates.values())
+    .map(candidate => ({
+      ...candidate,
+      matchedRepos: candidate.matchedRepos
+        .sort((a, b) => b.stars - a.stars)
+        .slice(0, 3),
+      score: Math.min(candidate.score + Math.max(candidate.matchedRepos.length - 1, 0) * 0.08, 1),
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+
+  const profiles = await Promise.all(
+    ranked.map(candidate => fetchPublicGitHubUser(candidate.login).catch(() => null))
+  )
+
+  const matches = ranked.flatMap((candidate, index): GitHubCollaboratorMatch[] => {
+    const profile = profiles[index]
+    if (!profile || profile.type !== 'User') return []
+    return [{
+      id: profile.id,
+      login: profile.login,
+      name: profile.name,
+      bio: profile.bio,
+      email: profile.email ?? null,
+      avatar_url: profile.avatar_url,
+      html_url: profile.html_url ?? `https://github.com/${profile.login}`,
+      public_repos: profile.public_repos,
+      score: candidate.score,
+      matchedRepos: candidate.matchedRepos,
+    }]
+  })
+
+  res.json({ matches })
 })
 
 // AI breakdown for a specific match (cached in DB + in-flight dedupe)
@@ -249,19 +467,21 @@ router.post('/insights', async (req: AuthRequest, res: Response): Promise<void> 
     return
   }
 
-  const projectPairs = (matchedNodes ?? []).filter(
-    m => m.myNodeType === 'project' && m.theirNodeType === 'project'
+  const insightPairs = (matchedNodes ?? []).filter(
+    m =>
+      ['project', 'skill', 'expertise'].includes(m.myNodeType) &&
+      ['project', 'skill', 'expertise'].includes(m.theirNodeType)
   )
 
-  if (!projectPairs.length) {
-    res.status(400).json({ error: 'No project pairs to analyze' })
+  if (!insightPairs.length) {
+    res.status(400).json({ error: 'No overlap pairs to analyze' })
     return
   }
 
   try {
     const nodeIds = [
-      ...projectPairs.map(m => m.myNodeId),
-      ...projectPairs.map(m => m.theirNodeId),
+      ...insightPairs.map(m => m.myNodeId),
+      ...insightPairs.map(m => m.theirNodeId),
     ]
 
     const [{ data: matchRow }, { data: profiles }, { data: nodes }] = await Promise.all([
@@ -284,7 +504,7 @@ router.post('/insights', async (req: AuthRequest, res: Response): Promise<void> 
     const nodeVersions = new Map(
       (nodes ?? []).map(n => [n.id, n.updated_at ?? ''])
     )
-    const insightsFp = fingerprintInsights(projectPairs, nodeVersions)
+    const insightsFp = fingerprintInsights(insightPairs, nodeVersions)
 
     if (!refresh && matchRow?.insights && matchRow.insights_fingerprint === insightsFp) {
       res.json({ ...(matchRow.insights as MatchInsights), cached: true })
@@ -296,12 +516,12 @@ router.post('/insights', async (req: AuthRequest, res: Response): Promise<void> 
       async () => {
         const me = profiles?.find(p => p.id === req.userId)
         const them = profiles?.find(p => p.id === otherUserId)
-        const myById = new Map((nodes ?? []).filter(n => projectPairs.some(p => p.myNodeId === n.id)).map(n => [n.id, n]))
+        const myById = new Map((nodes ?? []).filter(n => insightPairs.some(p => p.myNodeId === n.id)).map(n => [n.id, n]))
         const theirById = new Map(
-          (nodes ?? []).filter(n => projectPairs.some(p => p.theirNodeId === n.id)).map(n => [n.id, n])
+          (nodes ?? []).filter(n => insightPairs.some(p => p.theirNodeId === n.id)).map(n => [n.id, n])
         )
 
-        const pairs = projectPairs.map(m => {
+        const pairs = insightPairs.map(m => {
           const mine = myById.get(m.myNodeId)
           const theirs = theirById.get(m.theirNodeId)
           const myCtx = projectContextFromNode({
@@ -349,8 +569,8 @@ router.post('/insights', async (req: AuthRequest, res: Response): Promise<void> 
       {
         user_id_1: req.userId,
         user_id_2: otherUserId,
-        similarity_score: projectPairs[0]?.similarity ?? 0,
-        matched_nodes: projectPairs,
+        similarity_score: insightPairs[0]?.similarity ?? 0,
+        matched_nodes: insightPairs,
         insights,
         insights_fingerprint: insightsFp,
         updated_at: new Date().toISOString(),

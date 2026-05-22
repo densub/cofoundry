@@ -26,14 +26,18 @@ availableSecrets:
       env: ANTHROPIC_API_KEY
     - versionName: projects/$PROJECT_ID/secrets/OPENAI_API_KEY/versions/latest
       env: OPENAI_API_KEY
-    - versionName: projects/$PROJECT_ID/secrets/GITHUB_CLIENT_ID/versions/latest
-      env: GITHUB_CLIENT_ID
-    - versionName: projects/$PROJECT_ID/secrets/GITHUB_CLIENT_SECRET/versions/latest
-      env: GITHUB_CLIENT_SECRET
+    - versionName: projects/$PROJECT_ID/secrets/GITHUB_CLIENT_ID_PROD/versions/latest
+      env: GITHUB_CLIENT_ID_PROD
+    - versionName: projects/$PROJECT_ID/secrets/GITHUB_CLIENT_SECRET_PROD/versions/latest
+      env: GITHUB_CLIENT_SECRET_PROD
     - versionName: projects/$PROJECT_ID/secrets/LINKEDIN_CLIENT_ID/versions/latest
       env: LINKEDIN_CLIENT_ID
     - versionName: projects/$PROJECT_ID/secrets/LINKEDIN_CLIENT_SECRET/versions/latest
       env: LINKEDIN_CLIENT_SECRET
+    - versionName: projects/$PROJECT_ID/secrets/SENDGRID_API_KEY/versions/latest
+      env: SENDGRID_API_KEY
+    - versionName: projects/$PROJECT_ID/secrets/SENDGRID_FROM_EMAIL/versions/latest
+      env: SENDGRID_FROM_EMAIL
 
 steps:
   # ── Backend ────────────────────────────────────────────────────────────────
@@ -64,10 +68,12 @@ steps:
       - SUPABASE_SERVICE_ROLE_KEY_PROD
       - ANTHROPIC_API_KEY
       - OPENAI_API_KEY
-      - GITHUB_CLIENT_ID
-      - GITHUB_CLIENT_SECRET
+      - GITHUB_CLIENT_ID_PROD
+      - GITHUB_CLIENT_SECRET_PROD
       - LINKEDIN_CLIENT_ID
       - LINKEDIN_CLIENT_SECRET
+      - SENDGRID_API_KEY
+      - SENDGRID_FROM_EMAIL
     args:
       - -c
       - |
@@ -83,7 +89,7 @@ steps:
           --min-instances=0 \
           --max-instances=10 \
           --set-env-vars=NODE_ENV=production,SUPABASE_ENV=PROD,APP_URL=${_API_URL},FRONTEND_URL=${_FRONTEND_URL} \
-          --set-secrets=SUPABASE_URL_PROD=SUPABASE_URL_PROD:latest,SUPABASE_ANON_KEY_PROD=SUPABASE_ANON_KEY_PROD:latest,SUPABASE_SERVICE_ROLE_KEY_PROD=SUPABASE_SERVICE_ROLE_KEY_PROD:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,GITHUB_CLIENT_ID=GITHUB_CLIENT_ID:latest,GITHUB_CLIENT_SECRET=GITHUB_CLIENT_SECRET:latest,LINKEDIN_CLIENT_ID=LINKEDIN_CLIENT_ID:latest,LINKEDIN_CLIENT_SECRET=LINKEDIN_CLIENT_SECRET:latest \
+          --set-secrets=SUPABASE_URL_PROD=SUPABASE_URL_PROD:latest,SUPABASE_ANON_KEY_PROD=SUPABASE_ANON_KEY_PROD:latest,SUPABASE_SERVICE_ROLE_KEY_PROD=SUPABASE_SERVICE_ROLE_KEY_PROD:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,GITHUB_CLIENT_ID_PROD=GITHUB_CLIENT_ID_PROD:latest,GITHUB_CLIENT_SECRET_PROD=GITHUB_CLIENT_SECRET_PROD:latest,LINKEDIN_CLIENT_ID=LINKEDIN_CLIENT_ID:latest,LINKEDIN_CLIENT_SECRET=LINKEDIN_CLIENT_SECRET:latest,SENDGRID_API_KEY=SENDGRID_API_KEY:latest,SENDGRID_FROM_EMAIL=SENDGRID_FROM_EMAIL:latest \
           --quiet
         echo "${_API_URL}" > /workspace/backend_url.txt
     waitFor: [push-backend]

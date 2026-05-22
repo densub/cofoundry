@@ -234,7 +234,7 @@ export default function IntegrationCard({
               : `Connect your ${isGitHub ? 'GitHub' : 'LinkedIn'}`}
         </button>
       ) : (
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           {!isGitHub && !showManual && (
             <button
               onClick={() => setShowManual(true)}
@@ -254,7 +254,7 @@ export default function IntegrationCard({
           >
             {loading === 'import' ? (
               <><div className="w-3.5 h-3.5 border-2 border-current/30 border-t-current rounded-full animate-spin" /> Importing…</>
-            ) : '✨ Import to graph'}
+            ) : 'Import to graph'}
           </button>
         </div>
       )}

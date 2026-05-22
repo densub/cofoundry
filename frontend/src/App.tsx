@@ -6,7 +6,7 @@ import AuthPage from './pages/AuthPage'
 import AuthCallbackPage from './pages/AuthCallbackPage'
 import OnboardingPage from './pages/OnboardingPage'
 import DashboardPage from './pages/DashboardPage'
-import MatchesPage from './pages/MatchesPage'
+import ConnectionsPage from './pages/ConnectionsPage'
 import IntegrationsPage from './pages/IntegrationsPage'
 import SettingsPage from './pages/SettingsPage'
 import { useStore } from './store/useStore'
@@ -74,7 +74,8 @@ export default function App() {
 
         <Route element={<Layout />}>
           <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-          <Route path="/matches" element={<ProtectedRoute><MatchesPage /></ProtectedRoute>} />
+          <Route path="/connections" element={<ProtectedRoute><ConnectionsPage /></ProtectedRoute>} />
+          <Route path="/matches" element={<Navigate to="/connections" replace />} />
           <Route path="/integrations" element={<ProtectedRoute><IntegrationsPage /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
         </Route>

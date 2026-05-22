@@ -61,13 +61,13 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-10">
+    <div className="max-w-2xl mx-auto px-3 sm:px-4 py-6 sm:py-10">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white">Settings</h1>
         <p className="text-white/40 text-sm mt-1">Manage your account</p>
       </div>
 
-      <section className="rounded-xl border border-space-600 bg-space-800/50 p-6 mb-6">
+      <section className="rounded-xl border border-space-600 bg-space-800/50 p-4 sm:p-6 mb-6">
         <h2 className="text-sm font-semibold text-fg mb-4">Account</h2>
         <dl className="space-y-3 text-sm">
           <div>
@@ -89,7 +89,7 @@ export default function SettingsPage() {
         </dl>
       </section>
 
-      <section className="rounded-xl border border-space-600 bg-space-800/50 p-6 mb-6">
+      <section className="rounded-xl border border-space-600 bg-space-800/50 p-4 sm:p-6 mb-6">
         <h2 className="text-sm font-semibold text-fg mb-1">Profile</h2>
         <p className="text-sm text-fg-muted mb-5">
           This is the profile information collected during onboarding.
@@ -131,14 +131,14 @@ export default function SettingsPage() {
             type="button"
             onClick={handleSaveProfile}
             disabled={savingProfile}
-            className="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 disabled:opacity-40 font-medium text-sm transition-colors"
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 disabled:opacity-40 font-medium text-sm transition-colors"
           >
             {savingProfile ? 'Saving...' : 'Save profile'}
           </button>
         </div>
       </section>
 
-      <section className="rounded-xl border border-red-500/30 bg-red-500/5 p-6">
+      <section className="rounded-xl border border-red-500/30 bg-red-500/5 p-4 sm:p-6">
         <h2 className="text-sm font-semibold text-red-400 mb-2">Delete account</h2>
         <p className="text-sm text-fg-muted mb-4">
           Permanently removes your profile, knowledge graph, conversations, integrations, and
@@ -165,7 +165,7 @@ export default function SettingsPage() {
           type="button"
           onClick={handleDeleteAccount}
           disabled={!canDelete || deleting}
-          className="px-4 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="w-full sm:w-auto px-4 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           {deleting ? 'Deleting…' : 'Delete my account'}
         </button>

@@ -1,5 +1,19 @@
 import { getAuthHeader } from './supabase'
-import { KNode, KEdge, Profile, NodeType, Message, UserMatch, MatchInsights, MatchedNodePair } from '../types'
+import {
+  KNode,
+  KEdge,
+  Profile,
+  NodeType,
+  Message,
+  UserMatch,
+  MatchInsights,
+  MatchedNodePair,
+  ConnectionsSummary,
+  ConnectionsSearchResult,
+  ConnectionsNetworkGraph,
+  ConnectionPairGraph,
+  GitHubCollaboratorMatch,
+} from '../types'
 
 const BASE = '/api'
 
@@ -173,6 +187,11 @@ export const matchingApi = {
     )
   },
 
+  findGitHubMatches: (options?: { limit?: number }) =>
+    request<{ matches: GitHubCollaboratorMatch[]; message?: string }>(
+      `/matching/github?limit=${options?.limit ?? 10}`
+    ),
+
   getInsights: (
     otherUserId: string,
     matchedNodes: MatchedNodePair[],
@@ -191,4 +210,41 @@ export const matchingApi = {
 
   updateStatus: (matchId: string, status: 'connected' | 'dismissed' | 'pending') =>
     request(`/matching/${matchId}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+}
+
+// ── Connections ───────────────────────────────────────────────────────────────
+export const connectionsApi = {
+  list: () => request<ConnectionsSummary>('/connections'),
+
+  getNetworkGraph: () => request<ConnectionsNetworkGraph>('/connections/network-graph'),
+
+  getPairGraph: (otherUserId: string) =>
+    request<ConnectionPairGraph>(`/connections/users/${otherUserId}/graph`),
+
+  removeConnection: (otherUserId: string) =>
+    request<void>(`/connections/users/${otherUserId}`, { method: 'DELETE' }),
+
+  search: (query: string) =>
+    request<ConnectionsSearchResult>(`/connections/search?q=${encodeURIComponent(query)}`),
+
+  sendRequest: (recipientId: string) =>
+    request('/connections/requests', {
+      method: 'POST',
+      body: JSON.stringify({ recipientId }),
+    }),
+
+  acceptRequest: (requestId: string) =>
+    request(`/connections/requests/${requestId}/accept`, { method: 'POST' }),
+
+  cancelRequest: (requestId: string) =>
+    request(`/connections/requests/${requestId}/cancel`, { method: 'POST' }),
+
+  declineRequest: (requestId: string) =>
+    request(`/connections/requests/${requestId}/decline`, { method: 'POST' }),
+
+  inviteGitHub: (data: { login: string; email: string; profileUrl: string; name?: string | null }) =>
+    request('/connections/invites/github', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 }

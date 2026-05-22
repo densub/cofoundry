@@ -92,7 +92,7 @@ export default function ChatPanel() {
   }
 
   return (
-    <div className="absolute right-0 top-0 h-full w-[420px] flex flex-col bg-space-800 border-l border-white/10 animate-slide-in z-10">
+    <div className="absolute inset-0 sm:inset-y-0 sm:left-auto sm:right-0 sm:w-[420px] flex flex-col bg-space-800 border-l border-white/10 animate-slide-in z-10">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/10" style={{ borderTopColor: color, borderTopWidth: 2 }}>
         <div className="flex items-center gap-3 min-w-0">
@@ -135,7 +135,7 @@ export default function ChatPanel() {
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {chatMessages.length === 0 && (
               <div className="text-center text-white/30 text-sm pt-8">
-                <div className="text-3xl mb-3">💬</div>
+                <div className="text-3xl mb-3">◇</div>
                 <p>Chat about this node.</p>
                 <p className="mt-1">Ask questions, explore ideas, or brainstorm expansions.</p>
               </div>
@@ -150,7 +150,7 @@ export default function ChatPanel() {
                 <p className="text-xs text-white/50 uppercase tracking-widest">Suggested node</p>
                 <p className="font-semibold text-white">{pendingOp.title}</p>
                 <p className="text-sm text-white/60">{pendingOp.reason}</p>
-                <div className="flex gap-2 pt-1">
+                <div className="flex flex-col sm:flex-row gap-2 pt-1">
                   <button
                     onClick={() => handleAcceptOperation(pendingOp)}
                     className="px-3 py-1.5 text-sm rounded-lg text-white font-medium transition-colors"

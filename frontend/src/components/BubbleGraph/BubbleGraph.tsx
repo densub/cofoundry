@@ -36,9 +36,10 @@ interface Props {
   edges: KEdge[]
   width: number
   height: number
+  readOnly?: boolean
 }
 
-export default function BubbleGraph({ nodes, edges, width, height }: Props) {
+export default function BubbleGraph({ nodes, edges, width, height, readOnly = false }: Props) {
   const fgRef = useRef<any>(null)
   const { openChat, selectedNode } = useStore()
 
@@ -90,7 +91,12 @@ export default function BubbleGraph({ nodes, edges, width, height }: Props) {
   const drawNode = useCallback((node: GraphNode, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const baseSize = (node.size_weight ?? 1) * 10
     const isSelected = selectedNode?.id === node.id
-    const color = TYPE_COLORS[node.type] ?? TYPE_COLORS.custom
+    const isOtherUserNode = readOnly && node.id.startsWith('other:')
+    const color = readOnly
+      ? isOtherUserNode
+        ? '#34d399'
+        : '#58a6ff'
+      : TYPE_COLORS[node.type] ?? TYPE_COLORS.custom
     const x = node.x ?? 0
     const y = node.y ?? 0
 
@@ -146,11 +152,13 @@ export default function BubbleGraph({ nodes, edges, width, height }: Props) {
   const nodeVal = useCallback((node: GraphNode) => (node.size_weight ?? 1) * 52, [])
 
   const linkColor = useCallback((link: GraphLink) => {
+    if (link.relationship_type === 'match') return 'rgba(163,113,247,0.65)'
     if (link.relationship_type === 'contains') return 'rgba(88,166,255,0.22)'
     return 'rgba(255,255,255,0.06)'
   }, [])
 
   const linkWidth = useCallback((link: GraphLink) => {
+    if (link.relationship_type === 'match') return 2
     if (link.relationship_type === 'contains') return 1.2
     return 0.5
   }, [])
@@ -166,14 +174,16 @@ export default function BubbleGraph({ nodes, edges, width, height }: Props) {
   }, [])
 
   const handleNodeClick = useCallback((node: GraphNode) => {
+    if (readOnly) return
     openChat(node)
     fgRef.current?.centerAt(node.x, node.y, 600)
     fgRef.current?.zoom(2.5, 600)
-  }, [openChat])
+  }, [openChat, readOnly])
 
   const handleBackgroundClick = useCallback(() => {
+    if (readOnly) return
     useStore.getState().closeChat()
-  }, [])
+  }, [readOnly])
 
   const handleEngineStop = useCallback(() => {
     fgRef.current?.zoomToFit(400, 80)
@@ -193,9 +203,11 @@ export default function BubbleGraph({ nodes, edges, width, height }: Props) {
       linkColor={linkColor}
       linkWidth={linkWidth}
       linkCurvature={linkCurvature}
-      linkDirectionalParticles={1}
-      linkDirectionalParticleWidth={1}
-      linkDirectionalParticleColor={() => 'rgba(88,166,255,0.35)'}
+      linkDirectionalParticles={(link: GraphLink) => (link.relationship_type === 'match' ? 2 : 1)}
+      linkDirectionalParticleWidth={(link: GraphLink) => (link.relationship_type === 'match' ? 2 : 1)}
+      linkDirectionalParticleColor={(link: GraphLink) =>
+        link.relationship_type === 'match' ? 'rgba(163,113,247,0.8)' : 'rgba(88,166,255,0.35)'
+      }
       onNodeClick={handleNodeClick}
       onBackgroundClick={handleBackgroundClick}
       onEngineStop={handleEngineStop}

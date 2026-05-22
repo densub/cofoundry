@@ -16,7 +16,9 @@ export interface GitHubProfile {
   login: string
   name: string | null
   bio: string | null
+  email?: string | null
   avatar_url: string
+  html_url?: string
   public_repos: number
 }
 
@@ -36,6 +38,101 @@ function githubHeaders(token: string): Record<string, string> {
     'User-Agent': 'CoFoundry-App',
     Accept: 'application/vnd.github+json',
   }
+}
+
+function publicGithubHeaders(): Record<string, string> {
+  return {
+    'User-Agent': 'CoFoundry-App',
+    Accept: 'application/vnd.github+json',
+  }
+}
+
+function githubSearchHeaders(token?: string | null): Record<string, string> {
+  return token ? githubHeaders(token) : publicGithubHeaders()
+}
+
+export interface PublicGitHubUser {
+  id: number
+  login: string
+  name: string | null
+  bio: string | null
+  email: string | null
+  avatar_url: string
+  html_url: string
+  public_repos: number
+  type: 'User' | 'Organization' | string
+}
+
+export interface PublicGitHubRepo {
+  id: number
+  name: string
+  full_name: string
+  description: string | null
+  html_url: string
+  stargazers_count: number
+  fork: boolean
+  language: string | null
+  topics: string[]
+  updated_at: string
+  owner: {
+    login: string
+    avatar_url: string
+    html_url: string
+    type?: 'User' | 'Organization' | string
+  }
+}
+
+export async function fetchPublicGitHubUser(login: string): Promise<PublicGitHubUser | null> {
+  const safeLogin = login.trim().replace(/^@/, '')
+  if (!safeLogin) return null
+
+  const res = await fetch(`https://api.github.com/users/${encodeURIComponent(safeLogin)}`, {
+    headers: publicGithubHeaders(),
+  })
+
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error(`GitHub user lookup failed: ${res.status}`)
+  return await res.json() as PublicGitHubUser
+}
+
+export async function searchPublicGitHubUsers(query: string, limit = 5): Promise<PublicGitHubUser[]> {
+  const safeQuery = query.trim()
+  if (!safeQuery) return []
+
+  const exact = await fetchPublicGitHubUser(safeQuery).catch(() => null)
+  const searchRes = await fetch(
+    `https://api.github.com/search/users?q=${encodeURIComponent(safeQuery)}+in:login&type=Users&per_page=${limit}`,
+    { headers: publicGithubHeaders() },
+  )
+
+  if (!searchRes.ok) throw new Error(`GitHub user search failed: ${searchRes.status}`)
+  const payload = await searchRes.json() as { items?: Array<{ login: string }> }
+  const logins = [
+    ...(exact ? [exact.login] : []),
+    ...((payload.items ?? []).map(item => item.login)),
+  ]
+
+  const uniqueLogins = Array.from(new Set(logins)).slice(0, limit)
+  const users = await Promise.all(uniqueLogins.map(login => fetchPublicGitHubUser(login).catch(() => null)))
+  return users.filter((user): user is PublicGitHubUser => user !== null && user.type === 'User')
+}
+
+export async function searchPublicGitHubRepos(
+  query: string,
+  limit = 10,
+  token?: string | null
+): Promise<PublicGitHubRepo[]> {
+  const safeQuery = query.trim()
+  if (!safeQuery) return []
+
+  const res = await fetch(
+    `https://api.github.com/search/repositories?q=${encodeURIComponent(safeQuery)}&sort=stars&order=desc&per_page=${limit}`,
+    { headers: githubSearchHeaders(token) },
+  )
+
+  if (!res.ok) throw new Error(`GitHub repository search failed: ${res.status}`)
+  const payload = await res.json() as { items?: PublicGitHubRepo[] }
+  return (payload.items ?? []).filter(repo => !repo.fork && repo.owner?.type !== 'Organization')
 }
 
 /** Fetch every page of the user's owned repos (non-forks). */

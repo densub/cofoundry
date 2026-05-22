@@ -211,7 +211,7 @@ export async function generateMatchInsights(input: MatchInsightsInput): Promise<
     model: 'claude-sonnet-4-6',
     max_tokens: 1800,
     system:
-      'You analyze GitHub project overlaps between two developers. Ignore generic skills (TypeScript, HTML, CSS, etc.). Focus only on real repositories: what each project does, tech stacks, shared themes, and how they could collaborate on a concrete project. Be specific and practical.',
+      'You analyze project and skill overlaps between two builders. Focus on concrete repositories, complementary skill sets, shared themes, and how they could collaborate on a practical project. Be specific, simple, and useful. Avoid listing generic programming languages as the entire overlap.',
     tools: [
       {
         name: 'record_match_insights',
@@ -221,7 +221,7 @@ export async function generateMatchInsights(input: MatchInsightsInput): Promise<
           properties: {
             summary: {
               type: 'string',
-              description: '2-3 sentences on why these developers should collaborate (project themes, not individual skills)',
+              description: '2-3 simple sentences on why these builders should collaborate based on project themes and complementary skills',
             },
             projectOverlaps: {
               type: 'array',
@@ -262,10 +262,10 @@ Name: ${input.theirProfile.displayName}
 Role: ${input.theirProfile.role}
 Bio: ${input.theirProfile.bio}
 
-## Matched GitHub project pairs
+## Matched project and skill overlap pairs
 ${pairLines}
 
-Analyze each project pair. Do not list programming languages as standalone overlaps.`,
+Analyze each overlap pair. Include one concrete collaboration recommendation.`,
     }],
   })
 

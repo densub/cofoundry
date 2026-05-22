@@ -172,18 +172,18 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-space-950 flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-space-950 flex items-center justify-center px-3 sm:px-4 py-6 sm:py-12">
       <div className="w-full max-w-lg">
         <div className="flex flex-col items-center mb-8 gap-2">
           <Logo size="lg" />
           <p className="text-fg-muted text-sm">Build your graph from real project work</p>
         </div>
 
-        <div className="card p-8">
-          <div className="flex gap-2 mb-8">
+        <div className="card p-5 sm:p-8">
+          <div className="flex flex-wrap gap-2 mb-8">
             {(['profile', 'github'] as const).map((s, i) => (
               <div key={s} className="flex items-center gap-2">
-                {i > 0 && <div className="h-px w-8 bg-white/10" />}
+                {i > 0 && <div className="h-px w-4 sm:w-8 bg-white/10" />}
                 <div className={`flex items-center gap-2 text-sm ${step === s ? 'text-white' : 'text-white/40'}`}>
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${step === s ? 'bg-brand-600' : 'bg-white/10'}`}>
                     {i + 1}
@@ -268,7 +268,7 @@ export default function OnboardingPage() {
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-space-800 p-5">
+              <div className="rounded-2xl border border-white/10 bg-space-800 p-4 sm:p-5">
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
                     <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
