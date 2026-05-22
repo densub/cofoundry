@@ -28,14 +28,38 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) return <Navigate to="/auth" replace />
-  if (profile && !profile.is_onboarded) return <Navigate to="/onboarding" replace />
+  if (!profile || !profile.is_onboarded) return <Navigate to="/onboarding" replace />
   return <>{children}</>
 }
 
 function AuthRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
+  const profile = useStore(s => s.profile)
   if (loading) return null
-  if (user) return <Navigate to="/dashboard" replace />
+  if (user) {
+    return <Navigate to={profile?.is_onboarded ? '/dashboard' : '/onboarding'} replace />
+  }
+  return <>{children}</>
+}
+
+function OnboardingRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth()
+  const profile = useStore(s => s.profile)
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-space-950 flex items-center justify-center">
+        <div className="flex gap-2">
+          {[0, 1, 2].map(i => (
+            <div key={i} className="w-2.5 h-2.5 rounded-full bg-brand-500 animate-bounce" style={{ animationDelay: `${i * 120}ms` }} />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) return <Navigate to="/auth" replace />
+  if (profile?.is_onboarded) return <Navigate to="/dashboard" replace />
   return <>{children}</>
 }
 
@@ -46,7 +70,7 @@ export default function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/auth" element={<AuthRoute><AuthPage /></AuthRoute>} />
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
-        <Route path="/onboarding" element={<OnboardingPage />} />
+        <Route path="/onboarding" element={<OnboardingRoute><OnboardingPage /></OnboardingRoute>} />
 
         <Route element={<Layout />}>
           <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />

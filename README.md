@@ -64,10 +64,13 @@ cp frontend/.env.example frontend/.env
 
 | Variable | Description |
 |----------|-------------|
-| `SUPABASE_URL` | Supabase project URL |
-| `SUPABASE_ANON_KEY` | Anon/public key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Service role key (server only) |
-| `SUPABASE_DB_PASSWORD` | DB password (for `npm run db:migrate`) |
+| `SUPABASE_ENV` | `TEST` (local) or `PROD` (production/GCP); defaults to `TEST` unless `NODE_ENV=production` |
+| `SUPABASE_URL_PROD` | Supabase project URL (production) |
+| `SUPABASE_ANON_KEY_PROD` | Anon/public key (production) |
+| `SUPABASE_SERVICE_ROLE_KEY_PROD` | Service role key (server only, production) |
+| `SUPABASE_URL_TEST` / `SUPABASE_ANON_KEY_TEST` / `SUPABASE_SERVICE_ROLE_KEY_TEST` | Test project (optional; leave empty) |
+| `SUPABASE_DB_PROD_PASSWORD` | DB password (for `npm run db:migrate`) |
+| `SUPABASE_DB_TEST_PASSWORD` | Test DB password (optional; leave empty) |
 | `ANTHROPIC_API_KEY` | Claude API key |
 | `OPENAI_API_KEY` | Embeddings for matching |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | GitHub OAuth |
@@ -78,8 +81,10 @@ cp frontend/.env.example frontend/.env
 
 | Variable | Description |
 |----------|-------------|
-| `VITE_SUPABASE_URL` | Same as backend Supabase URL |
-| `VITE_SUPABASE_ANON_KEY` | Same anon key |
+| `VITE_SUPABASE_ENV` | `TEST` (local) or `PROD` (production build); defaults to `TEST` in dev, `PROD` in Vite production builds |
+| `VITE_SUPABASE_URL_PROD` | Same as backend `SUPABASE_URL_PROD` |
+| `VITE_SUPABASE_ANON_KEY_PROD` | Same as backend `SUPABASE_ANON_KEY_PROD` |
+| `VITE_SUPABASE_URL_TEST` / `VITE_SUPABASE_ANON_KEY_TEST` | Test project (optional; leave empty) |
 | `VITE_API_URL` | Backend URL, e.g. `http://localhost:3001` |
 | `VITE_AUTH_REDIRECT_URL` | Optional; default `{origin}/auth/callback` |
 
@@ -122,7 +127,7 @@ cp backend/.env.example backend/.env
 # Fill in Supabase, Anthropic, OpenAI, GitHub OAuth, etc.
 
 cp docker-compose.env.example .env
-# Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (same values as frontend/.env)
+# Set VITE_SUPABASE_URL_PROD and VITE_SUPABASE_ANON_KEY_PROD (same values as frontend/.env)
 ```
 
 For Docker, set OAuth URLs in `backend/.env`:
@@ -187,7 +192,7 @@ Full docs: [infra/gcp/README.md](infra/gcp/README.md) · Domain: **cofoundry.app
 
 ## Security notes
 
-- Keep `SUPABASE_SERVICE_ROLE_KEY`, OAuth secrets, and API keys **only** in local `.env` files or your deployment platform’s secret store.
+- Keep `SUPABASE_SERVICE_ROLE_KEY_PROD`, OAuth secrets, and API keys **only** in local `.env` files or your deployment platform’s secret store.
 - Use `.env.example` files as templates; do not put real secrets in the repo.
 - The service role key must never be exposed to the browser — only `VITE_*` public Supabase keys belong in the frontend.
 

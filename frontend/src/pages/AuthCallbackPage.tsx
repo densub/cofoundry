@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { profileApi } from '../lib/api'
+import { useStore } from '../store/useStore'
 import { Logo } from '../components/brand/Logo'
 
 export default function AuthCallbackPage() {
   const navigate = useNavigate()
+  const setProfile = useStore(s => s.setProfile)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -17,15 +20,23 @@ export default function AuthCallbackPage() {
 
     let settled = false
 
-    const finish = (path: string) => {
+    const finish = async () => {
       if (settled) return
       settled = true
+      let path = '/dashboard'
+      try {
+        const profile = await profileApi.getMe()
+        setProfile(profile)
+        if (!profile.is_onboarded) path = '/onboarding'
+      } catch {
+        path = '/onboarding'
+      }
       navigate(path, { replace: true })
     }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
-        finish('/dashboard')
+        void finish()
       }
     })
 
@@ -44,8 +55,8 @@ export default function AuthCallbackPage() {
         setError(sessionError.message)
         return
       }
-      if (session) finish('/dashboard')
-      else finish('/auth')
+      if (session) await finish()
+      else navigate('/auth', { replace: true })
     }
 
     resolveSession()

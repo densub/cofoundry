@@ -6,6 +6,7 @@ import nodeRoutes from './routes/nodes'
 import chatRoutes from './routes/chat'
 import matchingRoutes from './routes/matching'
 import integrationRoutes from './routes/integrations'
+import { getSupabaseEnv } from './lib/supabaseConfig'
 
 const app = express()
 const PORT = process.env.PORT ?? 3001
@@ -22,5 +23,5 @@ app.use('/api/matching', matchingRoutes)
 app.use('/api/integrations', integrationRoutes)
 
 app.listen(Number(PORT), '0.0.0.0', () => {
-  console.log(`Backend running on http://0.0.0.0:${PORT}`)
+  console.log(`Backend running on http://0.0.0.0:${PORT} (Supabase: ${getSupabaseEnv()})`)
 })

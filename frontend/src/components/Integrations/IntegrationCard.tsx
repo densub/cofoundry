@@ -57,6 +57,9 @@ export default function IntegrationCard({
     setLoading('connect')
     setError(null)
     try {
+      if (oauthReturnTo === '/onboarding') {
+        sessionStorage.setItem('onboarding_step', 'integrations')
+      }
       const { url } = await integrationsApi.getOAuthUrl(provider, oauthReturnTo)
       window.location.href = url
     } catch (err: unknown) {

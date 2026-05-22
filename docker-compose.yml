@@ -31,8 +31,11 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
-        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+        VITE_SUPABASE_ENV: ${VITE_SUPABASE_ENV:-TEST}
+        VITE_SUPABASE_URL_PROD: ${VITE_SUPABASE_URL_PROD}
+        VITE_SUPABASE_ANON_KEY_PROD: ${VITE_SUPABASE_ANON_KEY_PROD}
+        VITE_SUPABASE_URL_TEST: ${VITE_SUPABASE_URL_TEST}
+        VITE_SUPABASE_ANON_KEY_TEST: ${VITE_SUPABASE_ANON_KEY_TEST}
     container_name: cofoundry-frontend
     restart: unless-stopped
     ports:

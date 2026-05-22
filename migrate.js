@@ -5,12 +5,24 @@ const { Client } = require('./backend/node_modules/pg')
 const fs = require('fs')
 const path = require('path')
 
-const PASSWORD = process.env.SUPABASE_DB_PASSWORD
+function getSupabaseEnv() {
+  const raw = process.env.SUPABASE_ENV?.toUpperCase()
+  if (raw === 'TEST' || raw === 'PROD') return raw
+  return process.env.NODE_ENV === 'production' ? 'PROD' : 'TEST'
+}
+
+const supabaseEnv = getSupabaseEnv()
+const PASSWORD = process.env[`SUPABASE_DB_${supabaseEnv}_PASSWORD`]
 if (!PASSWORD) {
-  console.error('Set SUPABASE_DB_PASSWORD to your Supabase database password (Dashboard → Project Settings → Database).')
+  console.error(`Set SUPABASE_DB_${supabaseEnv}_PASSWORD to your Supabase database password (Dashboard → Project Settings → Database).`)
   process.exit(1)
 }
-const REF = process.env.SUPABASE_PROJECT_REF || 'voxxnyznweutlmrlgqmy'
+const supabaseUrl = process.env[`SUPABASE_URL_${supabaseEnv}`]
+const REF =
+  process.env.SUPABASE_PROJECT_REF ||
+  (supabaseUrl && supabaseUrl.match(/^https:\/\/([^.]+)\.supabase\.co/)?.[1]) ||
+  'voxxnyznweutlmrlgqmy'
+console.log(`Using Supabase ${supabaseEnv} (project ${REF})`)
 
 const pooler = (region, port = 5432) => ({
   host: `aws-1-${region}.pooler.supabase.com`,
@@ -21,11 +33,30 @@ const pooler = (region, port = 5432) => ({
   ssl: { rejectUnauthorized: false },
 })
 
+const poolerLegacy = (region, port = 5432) => ({
+  host: `aws-0-${region}.pooler.supabase.com`,
+  port,
+  user: `postgres.${REF}`,
+  password: PASSWORD,
+  database: 'postgres',
+  ssl: { rejectUnauthorized: false },
+})
+
 const connectionStrings = [
+  pooler('us-west-2', 5432),
+  pooler('us-west-2', 6543),
   pooler('us-west-1', 5432),
   pooler('us-west-1', 6543),
-  // Legacy fallbacks
-  { host: `aws-0-us-east-1.pooler.supabase.com`, port: 5432, user: `postgres.${REF}`, password: PASSWORD, database: 'postgres', ssl: { rejectUnauthorized: false } },
+  pooler('us-east-1', 5432),
+  poolerLegacy('us-east-1', 5432),
+  {
+    host: `db.${REF}.supabase.co`,
+    port: 5432,
+    user: 'postgres',
+    password: PASSWORD,
+    database: 'postgres',
+    ssl: { rejectUnauthorized: false },
+  },
 ]
 
 async function tryConnect() {

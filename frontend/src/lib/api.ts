@@ -34,10 +34,13 @@ export const profileApi = {
     display_name: string
     role: string
     bio: string
-  }) => request<{ rootNode: KNode; childNodes: KNode[] }>('/profile/onboard', {
+  }) => request<Profile>('/profile/onboard', {
     method: 'POST',
     body: JSON.stringify(data),
   }),
+
+  completeOnboarding: () =>
+    request<Profile>('/profile/onboard/complete', { method: 'POST' }),
 
   deleteAccount: () =>
     request<void>('/profile/delete-account', {

@@ -38,7 +38,15 @@ export const useStore = create<AppState>((set) => ({
   isGraphLoading: false,
 
   setProfile: (profile) => set({ profile }),
-  setNodes: (nodes) => set({ nodes }),
+  setNodes: (nodes) => set((s) => {
+    const selectedStillExists = !!s.selectedNode && nodes.some(n => n.id === s.selectedNode?.id)
+    return {
+      nodes,
+      selectedNode: selectedStillExists ? s.selectedNode : null,
+      isChatOpen: selectedStillExists ? s.isChatOpen : false,
+      chatMessages: selectedStillExists ? s.chatMessages : [],
+    }
+  }),
   setEdges: (edges) => set({ edges }),
 
   addNode: (node) => set((s) => ({ nodes: [...s.nodes, node] })),

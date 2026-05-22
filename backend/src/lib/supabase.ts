@@ -1,8 +1,9 @@
 import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAnonKey, getSupabaseServiceRoleKey, getSupabaseUrl } from './supabaseConfig'
 
-const supabaseUrl = process.env.SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!
+const supabaseUrl = getSupabaseUrl()
+const supabaseServiceKey = getSupabaseServiceRoleKey()
+const supabaseAnonKey = getSupabaseAnonKey()
 
 export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 

@@ -2,6 +2,7 @@ import crypto from 'crypto'
 import { Router, Request, Response } from 'express'
 import { authMiddleware, AuthRequest } from '../middleware/auth'
 import { supabaseAdmin } from '../lib/supabase'
+import { getSupabaseServiceRoleKey } from '../lib/supabaseConfig'
 import { fetchGitHubData, GitHubRepo } from '../services/github'
 import { fetchLinkedInProfile } from '../services/linkedin'
 import { createNode } from '../services/graph'
@@ -28,7 +29,7 @@ const router = Router()
 
 const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173'
 const APP_URL = process.env.APP_URL ?? 'http://localhost:3001'
-const STATE_SECRET = process.env.SUPABASE_SERVICE_ROLE_KEY ?? 'dev-secret'
+const STATE_SECRET = getSupabaseServiceRoleKey()
 
 function isOAuthConfigured(clientId?: string, clientSecret?: string): boolean {
   if (!clientId?.trim() || !clientSecret?.trim()) return false
@@ -200,10 +201,6 @@ router.post('/github/import', authMiddleware, async (req: AuthRequest, res: Resp
 
   try {
     const rootNodeId = await getRootNodeId(req.userId!)
-    if (!rootNodeId) {
-      res.status(400).json({ error: 'Complete onboarding first to create your graph root' })
-      return
-    }
 
     // Always refresh from GitHub so new repos appear on re-import
     const ghData = await fetchGitHubData(integration.access_token)
@@ -232,7 +229,7 @@ router.post('/github/import', authMiddleware, async (req: AuthRequest, res: Resp
           title: repo.name,
           content: body.content,
           summary: body.summary,
-          parentId: rootNodeId,
+          parentId: rootNodeId ?? undefined,
           metadata: {
             source: 'github',
             github: {

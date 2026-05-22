@@ -1,8 +1,6 @@
 import { Router, Response } from 'express'
 import { authMiddleware, AuthRequest } from '../middleware/auth'
 import { supabaseAdmin } from '../lib/supabase'
-import { generateRootNode } from '../services/llm'
-import { createNode } from '../services/graph'
 
 const router = Router()
 router.use(authMiddleware)
@@ -32,7 +30,7 @@ router.put('/me', async (req: AuthRequest, res: Response): Promise<void> => {
   res.json(data)
 })
 
-// Onboarding: profile + root node only — projects come from GitHub import
+// Onboarding profile step: save profile fields only. Graph nodes are created from imports later.
 router.post('/onboard', async (req: AuthRequest, res: Response): Promise<void> => {
   const { display_name, role, bio } = req.body
 
@@ -42,25 +40,43 @@ router.post('/onboard', async (req: AuthRequest, res: Response): Promise<void> =
   }
 
   try {
-    await supabaseAdmin.from('profiles').update({ display_name, role, bio }).eq('id', req.userId)
+    const { data, error } = await supabaseAdmin
+      .from('profiles')
+      .update({ display_name, role, bio })
+      .eq('id', req.userId)
+      .select()
+      .single()
 
-    const rootMd = await generateRootNode(display_name, role, bio ?? '')
-    const rootNode = await createNode(req.userId!, {
-      type: 'root',
-      title: `${display_name}'s Knowledge Graph`,
-      content: rootMd.content,
-      summary: rootMd.summary,
-      isRoot: true,
-      sizeWeight: 2.0,
-    })
-
-    await supabaseAdmin.from('profiles').update({ is_onboarded: true }).eq('id', req.userId)
-
-    res.json({ rootNode, childNodes: [] })
+    if (error) { res.status(400).json({ error: error.message }); return }
+    res.json(data)
   } catch (err) {
     console.error('Onboarding error:', err)
-    res.status(500).json({ error: 'Failed to generate knowledge graph' })
+    res.status(500).json({ error: 'Failed to save profile' })
   }
+})
+
+// Mark onboarding complete (profile + GitHub step done or skipped)
+router.post('/onboard/complete', async (req: AuthRequest, res: Response): Promise<void> => {
+  const { data: profile, error: profileError } = await req.supabase!
+    .from('profiles')
+    .select('display_name, role')
+    .eq('id', req.userId)
+    .single()
+
+  if (profileError || !profile?.display_name || !profile?.role) {
+    res.status(400).json({ error: 'Complete profile setup first' })
+    return
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('profiles')
+    .update({ is_onboarded: true })
+    .eq('id', req.userId)
+    .select()
+    .single()
+
+  if (error) { res.status(400).json({ error: error.message }); return }
+  res.json(data)
 })
 
 // Permanently delete auth user + all app data (DB cascades from profiles / auth.users)
