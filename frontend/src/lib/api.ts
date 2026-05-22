@@ -107,7 +107,10 @@ export async function* streamChat(
     body: JSON.stringify({ messages, message: userMessage, conversation_id: conversationId }),
   })
 
-  if (!res.ok || !res.body) throw new Error('Stream failed')
+  if (!res.ok || !res.body) {
+    const err = await res.json().catch(() => ({ error: 'Stream failed' }))
+    throw new Error(err.error ?? 'Stream failed')
+  }
 
   const reader = res.body.getReader()
   const decoder = new TextDecoder()
@@ -125,9 +128,13 @@ export async function* streamChat(
       if (!line.startsWith('data: ')) continue
       const data = line.slice(6)
       if (data === '[DONE]') { yield { done: true }; return }
+      let parsed: { text?: string; operations?: unknown; done?: boolean; error?: string } | null = null
       try {
-        yield JSON.parse(data)
+        parsed = JSON.parse(data)
       } catch { /* partial chunk */ }
+      if (!parsed) continue
+      if (parsed.error) throw new Error(parsed.error)
+      yield parsed
     }
   }
 }

@@ -35,9 +35,10 @@ export default function ChatPanel() {
   if (!isChatOpen || !selectedNode) return null
 
   const color = TYPE_COLORS[selectedNode.type] ?? TYPE_COLORS.custom
+  const canChat = selectedNode.type === 'project' && Boolean(selectedNode.metadata?.github)
 
   async function handleSend() {
-    if (!input.trim() || streaming || !selectedNode) return
+    if (!input.trim() || streaming || !selectedNode || !canChat) return
 
     const userMsg = { role: 'user' as const, content: input.trim(), timestamp: new Date().toISOString() }
     appendChatMessage(userMsg)
@@ -64,6 +65,9 @@ export default function ChatPanel() {
           setPendingOp(chunk.operations as NodeOperation)
         }
       }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Chat failed. Please try again.'
+      updateLastAssistantMessage(message)
     } finally {
       setStreaming(false)
     }
@@ -136,8 +140,17 @@ export default function ChatPanel() {
             {chatMessages.length === 0 && (
               <div className="text-center text-white/30 text-sm pt-8">
                 <div className="text-3xl mb-3">◇</div>
-                <p>Chat about this node.</p>
-                <p className="mt-1">Ask questions, explore ideas, or brainstorm expansions.</p>
+                {canChat ? (
+                  <>
+                    <p>Chat about this GitHub project.</p>
+                    <p className="mt-1">Ask questions, explore ideas, or brainstorm improvements.</p>
+                  </>
+                ) : (
+                  <>
+                    <p>Chat is limited to GitHub project nodes.</p>
+                    <p className="mt-1">This protects app data and keeps AI focused on one project.</p>
+                  </>
+                )}
               </div>
             )}
             {chatMessages.map((msg, i) => (
@@ -179,13 +192,14 @@ export default function ChatPanel() {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask or explore…"
+                placeholder={canChat ? 'Ask about this GitHub project…' : 'Chat is only available for GitHub project nodes'}
                 rows={2}
                 className="flex-1 resize-none rounded-xl bg-space-700 border border-white/10 text-white placeholder-white/30 px-3 py-2 text-sm focus:outline-none focus:border-white/30 transition-colors"
+                disabled={!canChat}
               />
               <button
                 onClick={handleSend}
-                disabled={!input.trim() || streaming}
+                disabled={!input.trim() || streaming || !canChat}
                 className="p-2.5 rounded-xl text-white transition-all disabled:opacity-40 flex-shrink-0"
                 style={{ backgroundColor: color }}
               >

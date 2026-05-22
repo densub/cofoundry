@@ -1,12 +1,41 @@
 import { Router, Response } from 'express'
 import { authMiddleware, AuthRequest } from '../middleware/auth'
 import { streamNodeChat, parseNodeOperations } from '../services/llm'
-import { createNode, getAdjacentContext } from '../services/graph'
+import { createNode } from '../services/graph'
 import { NodeType, Message } from '../types'
 import { supabaseAdmin } from '../lib/supabase'
+import { projectContextFromNode } from '../services/projectContext'
+import {
+  assertChatQuota,
+  cacheChatResponse,
+  chatCacheKey,
+  ChatQuotaError,
+  CHAT_OUTPUT_TOKEN_LIMIT,
+  estimateTokens,
+  getCachedChatResponse,
+  prepareChatContext,
+  recordChatUsage,
+} from '../services/chatUsage'
 
 const router = Router()
 router.use(authMiddleware)
+
+function githubProjectPromptContext(node: {
+  title: string
+  summary: string | null
+  content: string | null
+  metadata?: Record<string, unknown> | null
+}): string {
+  const project = projectContextFromNode(node)
+  const lines = [
+    `Title: ${project.title}`,
+    `Source: ${project.source === 'github' ? 'GitHub repository' : 'Project graph'}`,
+    `Stack/topics: ${project.stack}`,
+    `Description: ${project.description || 'No description provided.'}`,
+  ]
+  if (project.url) lines.push(`URL: ${project.url}`)
+  return lines.join('\n')
+}
 
 // Stream chat for a specific node
 router.post('/:nodeId/stream', async (req: AuthRequest, res: Response): Promise<void> => {
@@ -20,18 +49,33 @@ router.post('/:nodeId/stream', async (req: AuthRequest, res: Response): Promise<
     .from('nodes')
     .select('*')
     .eq('id', nodeId)
+    .eq('user_id', req.userId)
     .single()
 
   if (error || !node) { res.status(404).json({ error: 'Node not found' }); return }
+  if (node.type !== 'project' || !(node.metadata as Record<string, unknown> | null)?.github) {
+    res.status(403).json({ error: 'Chat is only available for your own GitHub project nodes.' })
+    return
+  }
 
-  const { data: profile } = await req.supabase!
-    .from('profiles')
-    .select('display_name, role, bio')
-    .eq('id', req.userId)
-    .single()
-
-  const userProfile = `${profile?.display_name ?? 'User'} — ${profile?.role ?? ''}. ${profile?.bio ?? ''}`
-  const adjacentContext = await getAdjacentContext(nodeId)
+  const nodeProjectContext = githubProjectPromptContext(node)
+  const prepared = prepareChatContext({
+    nodeContent: nodeProjectContext,
+    adjacentContext: '',
+    userProfile: '',
+    history: messages as Message[],
+    userMessage: message,
+  })
+  const cacheKey = chatCacheKey({
+    userId: req.userId!,
+    nodeId,
+    nodeUpdatedAt: node.updated_at,
+    nodeContent: prepared.nodeContent,
+    adjacentContext: '',
+    userProfile: '',
+    history: prepared.history,
+    userMessage: prepared.userMessage,
+  })
 
   // SSE headers
   res.setHeader('Content-Type', 'text/event-stream')
@@ -42,15 +86,40 @@ router.post('/:nodeId/stream', async (req: AuthRequest, res: Response): Promise<
   let fullResponse = ''
 
   try {
+    const cachedResponse = await getCachedChatResponse(cacheKey)
+    if (cachedResponse) {
+      fullResponse = cachedResponse
+      res.write(`data: ${JSON.stringify({ cached: true })}\n\n`)
+      res.write(`data: ${JSON.stringify({ text: cachedResponse })}\n\n`)
+    } else {
+      await assertChatQuota(req.userId!)
+
     for await (const chunk of streamNodeChat(
-      node.content,
-      adjacentContext,
-      userProfile,
-      messages as Message[],
-      message
+      prepared.nodeContent,
+      prepared.adjacentContext,
+      prepared.userProfile,
+      prepared.history,
+      prepared.userMessage,
+      { maxOutputTokens: CHAT_OUTPUT_TOKEN_LIMIT }
     )) {
       fullResponse += chunk
       res.write(`data: ${JSON.stringify({ text: chunk })}\n\n`)
+    }
+
+      await cacheChatResponse({
+        cacheKey,
+        userId: req.userId!,
+        nodeId,
+        promptTokens: prepared.estimatedInputTokens,
+        responseText: fullResponse,
+      })
+      await recordChatUsage({
+        userId: req.userId!,
+        nodeId,
+        promptTokens: prepared.estimatedInputTokens,
+        responseTokens: estimateTokens(fullResponse),
+        cacheKey,
+      })
     }
 
     // Parse and return any suggested operations
@@ -62,7 +131,7 @@ router.post('/:nodeId/stream', async (req: AuthRequest, res: Response): Promise<
     // Persist conversation
     const updatedMessages: Message[] = [
       ...messages,
-      { role: 'user', content: message, timestamp: new Date().toISOString() },
+      { role: 'user', content: prepared.userMessage, timestamp: new Date().toISOString() },
       { role: 'assistant', content: fullResponse, timestamp: new Date().toISOString() },
     ]
 
@@ -81,7 +150,12 @@ router.post('/:nodeId/stream', async (req: AuthRequest, res: Response): Promise<
     res.write('data: [DONE]\n\n')
     res.end()
   } catch (err) {
-    res.write(`data: ${JSON.stringify({ error: 'Stream failed' })}\n\n`)
+    const isQuota = err instanceof ChatQuotaError
+    res.write(`data: ${JSON.stringify({
+      error: isQuota ? err.message : 'Stream failed',
+      code: isQuota ? 'AI_CHAT_QUOTA_EXCEEDED' : 'STREAM_FAILED',
+      resetAt: isQuota ? err.resetAt : undefined,
+    })}\n\n`)
     res.end()
   }
 })
