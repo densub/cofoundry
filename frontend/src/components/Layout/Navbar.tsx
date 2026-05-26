@@ -40,6 +40,14 @@ function IntegrationsIcon({ className }: IconProps) {
   )
 }
 
+function TeamIcon({ className }: IconProps) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 20h5v-2a4 4 0 00-5.447-3.724M9 20H4v-2a4 4 0 015.447-3.724M15 7a4 4 0 11-8 0 4 4 0 018 0zm6 3a3 3 0 11-6 0 3 3 0 016 0zM3 10a3 3 0 116 0 3 3 0 01-6 0z" />
+    </svg>
+  )
+}
+
 function SettingsIcon({ className }: IconProps) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -59,6 +67,7 @@ export default function Navbar() {
   const links: NavLink[] = [
     { to: '/dashboard', label: 'My Graph', Icon: GraphIcon },
     { to: '/connections', label: 'My Connections', Icon: UsersIcon },
+    { to: '/build-team', label: 'Build a Team', Icon: TeamIcon },
     { to: '/integrations', label: 'Integrations', Icon: IntegrationsIcon },
     { to: '/settings', label: 'Settings', Icon: SettingsIcon },
   ]

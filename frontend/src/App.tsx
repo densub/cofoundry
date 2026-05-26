@@ -17,6 +17,10 @@ import CookiePolicyPage from './pages/CookiePolicyPage'
 import CareersPage from './pages/CareersPage'
 import CookieBanner from './components/CookieBanner'
 import { useStore } from './store/useStore'
+import AuthCollaboratorPage from './pages/AuthCollaboratorPage'
+import OnboardingCollaboratorPage from './pages/OnboardingCollaboratorPage'
+import BuildTeamPage from './pages/BuildTeamPage'
+import ExplorePage from './pages/ExplorePage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -83,7 +87,9 @@ export default function App() {
         <Route path="/careers" element={<CareersPage />} />
         <Route path="/auth" element={<AuthRoute><AuthPage /></AuthRoute>} />
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
+        <Route path="/auth/collaborator" element={<AuthCollaboratorPage />} />
         <Route path="/onboarding" element={<OnboardingRoute><OnboardingPage /></OnboardingRoute>} />
+        <Route path="/onboarding/collaborator" element={<OnboardingRoute><OnboardingCollaboratorPage /></OnboardingRoute>} />
 
         <Route element={<Layout />}>
           <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
@@ -91,6 +97,8 @@ export default function App() {
           <Route path="/matches" element={<Navigate to="/connections" replace />} />
           <Route path="/integrations" element={<ProtectedRoute><IntegrationsPage /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+          <Route path="/build-team" element={<ProtectedRoute><BuildTeamPage /></ProtectedRoute>} />
+          <Route path="/explore" element={<ProtectedRoute><ExplorePage /></ProtectedRoute>} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

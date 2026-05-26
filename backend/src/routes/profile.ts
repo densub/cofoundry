@@ -99,4 +99,63 @@ router.post('/delete-account', async (req: AuthRequest, res: Response): Promise<
   res.status(204).send()
 })
 
+// Collaborator onboarding: save expertise profile + mark as onboarded
+router.post('/onboard/collaborator', async (req: AuthRequest, res: Response): Promise<void> => {
+  const {
+    display_name,
+    headline,
+    expertise_tags,
+    industries,
+    linkedin_url,
+    portfolio_url,
+    past_ventures,
+    skills_description,
+    looking_for,
+    commitment,
+    open_to_equity,
+  } = req.body
+
+  if (!display_name || !headline) {
+    res.status(400).json({ error: 'display_name and headline are required' })
+    return
+  }
+
+  const userId = req.userId!
+
+  const [{ error: profileError }, { error: expertiseError }] = await Promise.all([
+    supabaseAdmin
+      .from('profiles')
+      .update({ display_name, user_type: 'collaborator', is_onboarded: true })
+      .eq('id', userId),
+    supabaseAdmin
+      .from('expertise_profiles')
+      .upsert({
+        user_id: userId,
+        headline,
+        expertise_tags: expertise_tags ?? [],
+        industries: industries ?? [],
+        linkedin_url: linkedin_url ?? null,
+        portfolio_url: portfolio_url ?? null,
+        past_ventures: past_ventures ?? null,
+        skills_description: skills_description ?? null,
+        looking_for: looking_for ?? null,
+        commitment: commitment ?? null,
+        open_to_equity: open_to_equity ?? true,
+      }, { onConflict: 'user_id' }),
+  ])
+
+  if (profileError || expertiseError) {
+    res.status(500).json({ error: profileError?.message ?? expertiseError?.message })
+    return
+  }
+
+  const { data: updated } = await supabaseAdmin
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single()
+
+  res.json(updated)
+})
+
 export default router
