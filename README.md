@@ -69,8 +69,10 @@ cp frontend/.env.example frontend/.env
 | `SUPABASE_ANON_KEY_PROD` | Anon/public key (production) |
 | `SUPABASE_SERVICE_ROLE_KEY_PROD` | Service role key (server only, production) |
 | `SUPABASE_URL_TEST` / `SUPABASE_ANON_KEY_TEST` / `SUPABASE_SERVICE_ROLE_KEY_TEST` | Test project (optional; leave empty) |
-| `SUPABASE_DB_PROD_PASSWORD` | DB password (for `npm run db:migrate`) |
-| `SUPABASE_DB_TEST_PASSWORD` | Test DB password (optional; leave empty) |
+| `SUPABASE_DATABASE_URL_PROD` | Full Postgres URI for `npm run db:migrate` (Session pooler from Supabase → Database) |
+| `SUPABASE_DATABASE_URL_TEST` | Test DB URI (optional; leave empty) |
+| `SUPABASE_DB_PROD_PASSWORD` | Legacy fallback if URL is not set (optional) |
+| `SUPABASE_DB_TEST_PASSWORD` | Test DB password legacy fallback (optional) |
 | `ANTHROPIC_API_KEY` | Claude API key |
 | `OPENAI_API_KEY` | Embeddings for matching |
 | `GITHUB_CLIENT_ID_PROD` / `GITHUB_CLIENT_SECRET_PROD` | GitHub OAuth (production) |
@@ -176,6 +178,8 @@ One-time setup:
 ```
 
 See [infra/gcp/GITHUB_ACTIONS.md](infra/gcp/GITHUB_ACTIONS.md). Manual deploy: `gcloud builds submit --config=cloudbuild.yaml --project=cofoundry-497002 .`
+
+Deploy runs DB migrations via `SUPABASE_DATABASE_URL_PROD` (full Session pooler URI from Supabase → **Database** → **Connection string**). Add it to `backend/.env`, then run `./infra/gcp/sync-secrets.sh`.
 
 Full docs: [infra/gcp/README.md](infra/gcp/README.md) · Domain: **cofoundry.app** — [infra/gcp/DOMAIN.md](infra/gcp/DOMAIN.md)
 
