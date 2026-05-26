@@ -1,0 +1,6 @@
+# Code Owners — only the listed GitHub users can approve PRs for the given paths.
+# A required review from a code owner must be obtained before any PR can merge to main.
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global rule: @densub must review and approve every pull request.
+* @densub
