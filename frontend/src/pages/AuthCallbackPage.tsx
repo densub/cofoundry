@@ -27,7 +27,10 @@ export default function AuthCallbackPage() {
       try {
         const profile = await profileApi.getMe()
         setProfile(profile)
-        if (!profile.is_onboarded) path = '/onboarding'
+        if (!profile.is_onboarded) {
+          const joinAs = localStorage.getItem('cofoundry_join_as')
+          path = joinAs === 'collaborator' ? '/onboarding/collaborator' : '/onboarding'
+        }
       } catch {
         path = '/onboarding'
       }

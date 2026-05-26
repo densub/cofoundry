@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link, useSearchParams } from 'react-router-dom'
+
 import { useAuth } from '../hooks/useAuth'
 import { Logo } from '../components/brand/Logo'
 
@@ -145,6 +146,13 @@ export default function AuthPage() {
             </p>
           </div>
         )}
+
+        <p className="text-center text-xs text-fg-subtle mt-5">
+          Not a developer?{' '}
+          <Link to="/auth/collaborator" className="text-brand-400 hover:text-brand-300">
+            Join as a collaborator →
+          </Link>
+        </p>
       </div>
     </div>
   )

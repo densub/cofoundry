@@ -31,6 +31,7 @@ export interface Profile {
   bio: string | null
   avatar_url: string | null
   is_onboarded: boolean
+  user_type?: 'developer' | 'collaborator'
 }
 
 export interface Message {
@@ -196,4 +197,108 @@ export interface GraphLink {
   target: string | GraphNode
   relationship_type: string
   weight: number
+}
+
+export interface ExpertiseProfile {
+  id: string
+  user_id: string
+  headline: string | null
+  expertise_tags: string[]
+  industries: string[]
+  linkedin_url: string | null
+  portfolio_url: string | null
+  past_ventures: string | null
+  looking_for: 'cofounder' | 'early-team' | 'advisor' | null
+  commitment: 'full-time' | 'part-time' | 'advisory' | null
+  open_to_equity: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface RecommendedRole {
+  role: string
+  title: string
+  why: string
+  priority: number
+  is_technical?: boolean
+}
+
+export interface ProjectIdea {
+  id: string
+  user_id: string
+  node_id: string | null
+  title: string
+  problem_statement: string
+  solution_description: string | null
+  target_market: string | null
+  stage: 'idea' | 'prototype' | 'launched' | 'growing'
+  skills_i_bring: string | null
+  project_summary: string | null
+  recommended_roles: RecommendedRole[]
+  analysis_at: string | null
+  status: 'active' | 'paused' | 'filled'
+  created_at: string
+  updated_at: string
+}
+
+export interface TeamAnalysis {
+  id: string
+  node_id: string
+  owner_id: string
+  project_summary: string
+  target_market: string
+  project_stage: 'idea' | 'prototype' | 'launched' | 'growing'
+  recommended_roles: RecommendedRole[]
+  created_at: string
+}
+
+export interface CollaboratorProfile {
+  id: string
+  user_id: string
+  headline: string | null
+  expertise_tags: string[]
+  industries: string[]
+  linkedin_url: string | null
+  portfolio_url: string | null
+  skills_description: string | null
+  looking_for: string | null
+  commitment: string | null
+  open_to_equity: boolean
+  profiles: {
+    id: string
+    display_name: string | null
+    avatar_url: string | null
+    username: string | null
+  }
+}
+
+export interface TeamRequest {
+  id: string
+  role: string
+  message: string | null
+  status: 'pending' | 'accepted' | 'declined' | 'cancelled'
+  direction: 'dev_to_collab' | 'collab_to_dev'
+  created_at: string
+  updated_at: string
+  node_id: string | null
+  idea_id: string | null
+  nodes: { id: string; title: string } | null
+  project_ideas: { id: string; title: string } | null
+  from_profile: { id: string; display_name: string | null; avatar_url: string | null; username: string | null } | null
+  to_profile: { id: string; display_name: string | null; avatar_url: string | null; username: string | null } | null
+}
+
+export interface TeamProject {
+  id: string
+  source: 'github' | 'idea'
+  node_id: string | null
+  idea_id: string | null
+  title: string
+  project_summary: string
+  target_market: string
+  project_stage: 'idea' | 'prototype' | 'launched' | 'growing'
+  recommended_roles: RecommendedRole[]
+  created_at: string
+  nodes: { id: string; title: string; user_id: string } | null
+  profiles: { id: string; display_name: string | null; avatar_url: string | null; username: string | null } | null
 }

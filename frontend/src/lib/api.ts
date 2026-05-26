@@ -13,6 +13,7 @@ import {
   ConnectionsNetworkGraph,
   ConnectionPairGraph,
   GitHubCollaboratorMatch,
+  ProjectIdea,
 } from '../types'
 
 const BASE = '/api'
@@ -282,4 +283,93 @@ export const connectionsApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+}
+
+// ── Team ─────────────────────────────────────────────────────────────────────
+export const teamApi = {
+  analyzeRepo: (nodeId: string) =>
+    request<import('../types').TeamAnalysis>(`/team/analyze/${nodeId}`, { method: 'POST' }),
+
+  getCollaborators: (params: { role: string; industries?: string[]; commitment?: string; page?: number }) => {
+    const qs = new URLSearchParams({ role: params.role })
+    if (params.industries?.length) qs.set('industries', params.industries.join(','))
+    if (params.commitment) qs.set('commitment', params.commitment)
+    if (params.page) qs.set('page', String(params.page))
+    return request<{ collaborators: import('../types').CollaboratorProfile[]; page: number; pageSize: number }>(
+      `/team/collaborators?${qs}`
+    )
+  },
+
+  getProjects: (params?: { role?: string; stage?: string; source?: string; page?: number }) => {
+    const qs = new URLSearchParams()
+    if (params?.role) qs.set('role', params.role)
+    if (params?.stage) qs.set('stage', params.stage)
+    if (params?.source) qs.set('source', params.source)
+    if (params?.page) qs.set('page', String(params.page))
+    const q = qs.toString()
+    return request<{ projects: import('../types').TeamProject[]; page: number; pageSize: number }>(
+      `/team/projects${q ? `?${q}` : ''}`
+    )
+  },
+
+  sendRequest: (data: {
+    to_user_id: string
+    node_id?: string
+    idea_id?: string
+    role: string
+    message?: string
+    direction: 'dev_to_collab' | 'collab_to_dev'
+  }) => request<import('../types').TeamRequest>('/team/requests', { method: 'POST', body: JSON.stringify(data) }),
+
+  respondToRequest: (id: string, status: 'accepted' | 'declined') =>
+    request<import('../types').TeamRequest>(`/team/requests/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+
+  cancelRequest: (id: string) =>
+    request<void>(`/team/requests/${id}`, { method: 'DELETE' }),
+
+  getRequests: () =>
+    request<{ sent: import('../types').TeamRequest[]; received: import('../types').TeamRequest[] }>('/team/requests'),
+
+  onboardCollaborator: (data: {
+    display_name: string
+    headline: string
+    expertise_tags: string[]
+    industries: string[]
+    linkedin_url?: string
+    portfolio_url?: string
+    past_ventures?: string
+    skills_description?: string
+    looking_for?: string
+    commitment?: string
+    open_to_equity?: boolean
+  }) => request<import('../types').Profile>('/profile/onboard/collaborator', { method: 'POST', body: JSON.stringify(data) }),
+
+  // ── Project Ideas ─────────────────────────────────────────────────────────
+  listMyIdeas: () => request<{ ideas: ProjectIdea[] }>('/team/ideas/mine'),
+
+  createIdea: (data: {
+    title: string
+    problem_statement: string
+    solution_description?: string
+    target_market?: string
+    stage?: string
+    skills_i_bring?: string
+    node_id?: string
+  }) => request<ProjectIdea>('/team/ideas', { method: 'POST', body: JSON.stringify(data) }),
+
+  updateIdea: (id: string, data: Partial<{
+    title: string
+    problem_statement: string
+    solution_description: string
+    target_market: string
+    stage: string
+    skills_i_bring: string
+    node_id: string | null
+    status: string
+  }>) => request<ProjectIdea>(`/team/ideas/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  deleteIdea: (id: string) => request<void>(`/team/ideas/${id}`, { method: 'DELETE' }),
+
+  analyzeIdea: (id: string) =>
+    request<ProjectIdea>(`/team/ideas/${id}/analyze`, { method: 'POST' }),
 }
