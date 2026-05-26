@@ -38,16 +38,15 @@ availableSecrets:
       env: SENDGRID_API_KEY
     - versionName: projects/$PROJECT_ID/secrets/SENDGRID_FROM_EMAIL/versions/latest
       env: SENDGRID_FROM_EMAIL
-    - versionName: projects/$PROJECT_ID/secrets/SUPABASE_DB_PROD_PASSWORD/versions/latest
-      env: SUPABASE_DB_PROD_PASSWORD
+    - versionName: projects/$PROJECT_ID/secrets/SUPABASE_DATABASE_URL_PROD/versions/latest
+      env: SUPABASE_DATABASE_URL_PROD
 
 steps:
   # ── DB migrations (runs in parallel with build-backend) ────────────────────
   - id: migrate
     name: node:22-alpine
     secretEnv:
-      - SUPABASE_URL_PROD
-      - SUPABASE_DB_PROD_PASSWORD
+      - SUPABASE_DATABASE_URL_PROD
     entrypoint: sh
     args:
       - -c
@@ -55,8 +54,7 @@ steps:
         set -e
         cd backend && npm ci --quiet && cd ..
         SUPABASE_ENV=PROD \
-        SUPABASE_URL_PROD="$$SUPABASE_URL_PROD" \
-        SUPABASE_DB_PROD_PASSWORD="$$SUPABASE_DB_PROD_PASSWORD" \
+        SUPABASE_DATABASE_URL_PROD="$$SUPABASE_DATABASE_URL_PROD" \
         node migrate.js
 
   # ── Backend ────────────────────────────────────────────────────────────────
