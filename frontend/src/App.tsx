@@ -11,6 +11,11 @@ import IntegrationsPage from './pages/IntegrationsPage'
 import SettingsPage from './pages/SettingsPage'
 import PrivacyPage from './pages/PrivacyPage'
 import TermsPage from './pages/TermsPage'
+import AboutPage from './pages/AboutPage'
+import ContactPage from './pages/ContactPage'
+import CookiePolicyPage from './pages/CookiePolicyPage'
+import CareersPage from './pages/CareersPage'
+import CookieBanner from './components/CookieBanner'
 import { useStore } from './store/useStore'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -72,6 +77,10 @@ export default function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/contact" element={<ContactPage />} />
+        <Route path="/cookies" element={<CookiePolicyPage />} />
+        <Route path="/careers" element={<CareersPage />} />
         <Route path="/auth" element={<AuthRoute><AuthPage /></AuthRoute>} />
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
         <Route path="/onboarding" element={<OnboardingRoute><OnboardingPage /></OnboardingRoute>} />
@@ -86,6 +95,7 @@ export default function App() {
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <CookieBanner />
     </BrowserRouter>
   )
 }

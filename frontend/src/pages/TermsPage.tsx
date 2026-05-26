@@ -3,15 +3,18 @@ import { Logo } from '../components/brand/Logo'
 
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-space-950 text-fg">
-      <nav className="flex items-center justify-between px-4 sm:px-8 py-5 border-b border-space-600/80">
-        <Link to="/" className="hover:opacity-90 transition-opacity">
+    <div className="min-h-screen bg-space-950 text-fg flex flex-col">
+      <nav className="sticky top-0 z-50 flex items-center justify-between px-4 sm:px-8 py-4 border-b border-space-600/80 bg-space-950/95 backdrop-blur-md">
+        <Link to="/" aria-label="CoFoundry home" className="hover:opacity-90 transition-opacity">
           <Logo size="md" />
         </Link>
-        <Link to="/auth" className="px-5 py-2 rounded-lg btn-primary text-sm">Sign up</Link>
+        <div className="flex items-center gap-4">
+          <Link to="/" className="text-sm text-fg-muted hover:text-fg transition-colors hidden sm:inline">← Back to home</Link>
+          <Link to="/auth" className="px-5 py-2 rounded-lg btn-primary text-sm">Get started free</Link>
+        </div>
       </nav>
 
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-14 sm:py-20">
+      <main className="flex-1 max-w-3xl mx-auto px-4 sm:px-6 py-14 sm:py-20">
         <p className="text-sm text-brand-400 font-semibold mb-3">Terms of Service</p>
         <h1 className="text-4xl sm:text-5xl font-bold mb-4">Use CoFoundry responsibly</h1>
         <p className="text-fg-muted leading-relaxed mb-10">
@@ -69,6 +72,17 @@ export default function TermsPage() {
           </section>
         </div>
       </main>
+
+      <footer className="border-t border-space-600 px-4 sm:px-8 py-6 text-xs text-fg-subtle">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+          <span>© 2025 CoFoundry. All rights reserved.</span>
+          <div className="flex items-center gap-4">
+            <Link to="/privacy" className="hover:text-fg transition-colors">Privacy</Link>
+            <Link to="/cookies" className="hover:text-fg transition-colors">Cookie Policy</Link>
+            <Link to="/contact" className="hover:text-fg transition-colors">Contact</Link>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }

@@ -5,7 +5,18 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "test": "jest --passWithNoTests",
+    "test:ci": "jest --ci --passWithNoTests"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "testMatch": ["**/__tests__/**/*.test.ts"],
+    "collectCoverageFrom": ["src/**/*.ts", "!src/index.ts"],
+    "moduleNameMapper": {
+      "^(\\.{1,2}/.*)\\.js$": "$1"
+    }
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.54.0",
@@ -19,7 +30,10 @@
   "devDependencies": {
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
+    "@types/jest": "^30.0.0",
     "@types/node": "^22.10.2",
+    "jest": "^30.4.2",
+    "ts-jest": "^29.4.11",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.7.2"
   }

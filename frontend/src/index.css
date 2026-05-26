@@ -4,7 +4,11 @@
 
 @layer base {
   * { box-sizing: border-box; }
-  html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
   body {
     @apply bg-space-900 text-fg font-sans;
     margin: 0;

@@ -8,7 +8,7 @@ jobs:
   build:
     name: Build check
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -38,3 +38,11 @@ jobs:
       - name: TypeScript check — backend
         run: npx tsc --noEmit
         working-directory: backend
+
+      - name: Tests — backend (Jest)
+        run: npm run test:ci
+        working-directory: backend
+
+      - name: Tests — frontend (Vitest)
+        run: npm run test:ci
+        working-directory: frontend

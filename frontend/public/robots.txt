@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /connections
+Disallow: /integrations
+Disallow: /settings
+Disallow: /onboarding
+Disallow: /auth/callback
+
+Sitemap: https://cofoundry.app/sitemap.xml
