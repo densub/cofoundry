@@ -39,10 +39,8 @@ jobs:
         run: npx tsc --noEmit
         working-directory: backend
 
-      - name: Tests — backend (Jest)
-        run: npm run test:ci
-        working-directory: backend
+      - name: Install root dependencies
+        run: npm ci
 
-      - name: Tests — frontend (Vitest)
+      - name: Tests — all (backend Jest + frontend Vitest)
         run: npm run test:ci
-        working-directory: frontend

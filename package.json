@@ -7,6 +7,8 @@
     "dev:frontend": "npm --prefix frontend run dev",
     "install:all": "npm --prefix backend install && npm --prefix frontend install",
     "build": "npm --prefix frontend run build && npm --prefix backend run build",
+    "test": "npm --prefix backend run test && npm --prefix frontend run test",
+    "test:ci": "npm --prefix backend run test:ci && npm --prefix frontend run test:ci",
     "db:migrate": "node migrate.js",
     "docker:up": "docker compose up --build",
     "docker:down": "docker compose down",
