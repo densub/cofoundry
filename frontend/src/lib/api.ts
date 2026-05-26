@@ -160,6 +160,17 @@ export interface IntegrationsStatus {
   linkedin: boolean
 }
 
+export interface GitHubRepoSummary {
+  id: number
+  name: string
+  full_name: string
+  description: string | null
+  language: string | null
+  html_url: string
+  stargazers_count: number
+  updated_at: string
+}
+
 export const integrationsApi = {
   status: () => request<IntegrationsStatus>('/integrations/status'),
 
@@ -172,6 +183,23 @@ export const integrationsApi = {
 
   disconnect: (provider: 'github' | 'linkedin') =>
     request<void>(`/integrations/${provider}`, { method: 'DELETE' }),
+
+  listGitHubRepos: (refresh = false) =>
+    request<{
+      repos: GitHubRepoSummary[]
+      selectedRepoFullNames: string[] | null
+      totalRepos: number
+    }>(`/integrations/github/repos${refresh ? '?refresh=true' : ''}`),
+
+  saveGitHubRepoSelection: (selectedRepoFullNames: string[]) =>
+    request<{
+      created: { projects: number }
+      message: string
+      selectedCount: number
+    }>('/integrations/github/repos', {
+      method: 'PUT',
+      body: JSON.stringify({ selectedRepoFullNames }),
+    }),
 
   importGitHub: () =>
     request<{ created: { projects: number }; message: string }>(

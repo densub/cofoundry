@@ -1,6 +1,11 @@
 import { Router, Response } from 'express'
 import { authMiddleware, AuthRequest } from '../middleware/auth'
 import { getUserGraph, createNode, updateNodeContent } from '../services/graph'
+import {
+  filterEdgesForNodes,
+  filterExposedNodes,
+  getGitHubRepoSelection,
+} from '../services/githubSelection'
 import { generateNodeContent } from '../services/llm'
 import { NodeType } from '../types'
 import { supabaseAdmin } from '../lib/supabase'
@@ -11,8 +16,14 @@ router.use(authMiddleware)
 // Get full graph for the authenticated user
 router.get('/graph', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const graph = await getUserGraph(req.userId!, req.supabase!)
-    res.json(graph)
+    const [graph, selection] = await Promise.all([
+      getUserGraph(req.userId!, req.supabase!),
+      getGitHubRepoSelection(req.userId!),
+    ])
+    const nodes = filterExposedNodes(graph.nodes, selection)
+    const visibleIds = new Set(nodes.map(n => n.id))
+    const edges = filterEdgesForNodes(graph.edges, visibleIds)
+    res.json({ nodes, edges })
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch graph' })
   }

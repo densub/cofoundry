@@ -71,7 +71,7 @@ export default function IntegrationsPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white">Integrations</h1>
         <p className="text-white/40 text-sm mt-1">
-          Connect GitHub to sync repositories as <span className="text-white/60">project nodes</span> in your graph. Matching uses projects only.
+          Connect GitHub, then choose which repositories appear in your graph and to your connections. Matching uses selected projects only.
         </p>
       </div>
 
