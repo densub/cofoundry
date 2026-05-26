@@ -11,6 +11,11 @@ import {
 import { generateMatchInsights, MatchInsights } from '../services/llm'
 import { projectContextFromNode } from '../services/projectContext'
 import {
+  filterExposedNodes,
+  getGitHubRepoSelection,
+  isNodeExposed,
+} from '../services/githubSelection'
+import {
   dedupeInsights,
   fingerprintInsights,
   fingerprintUserProjects,
@@ -101,21 +106,54 @@ async function loadCachedMatches(userId: string): Promise<UserMatch[]> {
   })
 }
 
+async function exposedNodeIdsForUser(userId: string): Promise<Set<string>> {
+  const [selection, { data: nodes }] = await Promise.all([
+    getGitHubRepoSelection(userId),
+    supabaseAdmin
+      .from('nodes')
+      .select('id, title, type, metadata')
+      .eq('user_id', userId)
+      .in('type', ['project', 'skill', 'expertise']),
+  ])
+  return new Set(
+    filterExposedNodes(
+      (nodes ?? []).map(n => ({
+        id: n.id,
+        type: n.type,
+        title: n.title,
+        metadata: n.metadata as Record<string, unknown>,
+      })),
+      selection,
+    ).map(n => n.id),
+  )
+}
+
 async function computeMatches(
   userId: string,
   threshold: number,
   limit: number
 ): Promise<UserMatch[]> {
-  const { data: myNodes } = await supabaseAdmin
-    .from('nodes')
-    .select('id, title, type, embedding')
-    .eq('user_id', userId)
-    .eq('type', 'project')
-    .not('embedding', 'is', null)
+  const [mySelection, { data: myNodesRaw }] = await Promise.all([
+    getGitHubRepoSelection(userId),
+    supabaseAdmin
+      .from('nodes')
+      .select('id, title, type, embedding, metadata')
+      .eq('user_id', userId)
+      .eq('type', 'project')
+      .not('embedding', 'is', null),
+  ])
+
+  const myNodes = (myNodesRaw ?? []).filter(n =>
+    isNodeExposed(
+      { type: n.type, title: n.title, metadata: n.metadata as Record<string, unknown> },
+      mySelection,
+    ),
+  )
 
   if (!myNodes?.length) return []
 
   const matchMap = new Map<string, UserMatch>()
+  const otherExposedCache = new Map<string, Set<string>>()
 
   await Promise.all(
     myNodes.slice(0, 5).map(async myNode => {
@@ -136,6 +174,13 @@ async function computeMatches(
         similarity: number
       }>) {
         if (match.type !== 'project') continue
+
+        let exposed = otherExposedCache.get(match.user_id)
+        if (!exposed) {
+          exposed = await exposedNodeIdsForUser(match.user_id)
+          otherExposedCache.set(match.user_id, exposed)
+        }
+        if (!exposed.has(match.id)) continue
 
         if (!matchMap.has(match.user_id)) {
           matchMap.set(match.user_id, {
@@ -312,18 +357,29 @@ router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
   const limit = parseInt(req.query.limit as string) || 10
   const refresh = req.query.refresh === 'true'
 
-  const { data: myNodes } = await req.supabase!
-    .from('nodes')
-    .select('id, updated_at')
-    .eq('user_id', req.userId)
-    .eq('type', 'project')
-    .not('embedding', 'is', null)
+  const [mySelection, { data: myNodesRaw }] = await Promise.all([
+    getGitHubRepoSelection(req.userId!),
+    req.supabase!
+      .from('nodes')
+      .select('id, updated_at, title, metadata')
+      .eq('user_id', req.userId)
+      .eq('type', 'project')
+      .not('embedding', 'is', null),
+  ])
+
+  const myNodes = (myNodesRaw ?? []).filter(n =>
+    isNodeExposed(
+      { type: 'project', title: n.title, metadata: n.metadata as Record<string, unknown> },
+      mySelection,
+    ),
+  )
 
   if (!myNodes?.length) {
     res.json({
       matches: [],
       cached: false,
-      message: 'Import GitHub projects first (Integrations → GitHub → Import) to enable project-based matching',
+      message:
+        'Choose GitHub repositories in Integrations to enable project-based matching',
     })
     return
   }

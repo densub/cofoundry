@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { Integration, integrationsApi } from '../../lib/api'
+import { Integration, integrationsApi, nodesApi } from '../../lib/api'
 import { useStore } from '../../store/useStore'
-import { nodesApi } from '../../lib/api'
+import GitHubRepoSelector from './GitHubRepoSelector'
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 function GitHubIcon({ className }: { className?: string }) {
@@ -81,22 +81,11 @@ export default function IntegrationCard({
     }
   }
 
-  async function handleImportGitHub() {
-    setLoading('import')
-    setError(null)
-    try {
-      const res = await integrationsApi.importGitHub()
-      setResult(res.message)
-      // Refresh nodes
-      const graph = await nodesApi.getGraph()
-      useStore.getState().setNodes(graph.nodes)
-      useStore.getState().setEdges(graph.edges)
-      onImported()
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Import failed')
-    } finally {
-      setLoading(null)
-    }
+  async function refreshGraphAfterGitHubChange() {
+    const graph = await nodesApi.getGraph()
+    useStore.getState().setNodes(graph.nodes)
+    useStore.getState().setEdges(graph.edges)
+    onImported()
   }
 
   async function handleImportLinkedIn() {
@@ -154,17 +143,31 @@ export default function IntegrationCard({
 
       {/* Connected: show data summary */}
       {connected && isGitHub && (
-        <div className="mb-4 space-y-1.5">
-          <p className="text-sm text-white/60">
-            <span className="text-white font-medium">{(meta.totalRepos as number) ?? 0}</span> repos
-            {((meta.topLanguages as string[] | undefined) ?? []).length > 0 ? (
-              <> · <span className="text-white font-medium">{(meta.topLanguages as string[]).join(', ')}</span></>
-            ) : null}
-          </p>
-          <p className="text-xs text-white/30">
-            Imports all your GitHub repositories (non-forks) as project nodes
-          </p>
-        </div>
+        <>
+          <div className="mb-2 space-y-1.5">
+            <p className="text-sm text-white/60">
+              <span className="text-white font-medium">{(meta.totalRepos as number) ?? 0}</span> repos on GitHub
+              {Array.isArray(meta.selectedRepoFullNames) ? (
+                <> · <span className="text-white font-medium">{(meta.selectedRepoFullNames as string[]).length}</span> visible in graph</>
+              ) : null}
+              {((meta.topLanguages as string[] | undefined) ?? []).length > 0 ? (
+                <> · <span className="text-white font-medium">{(meta.topLanguages as string[]).join(', ')}</span></>
+              ) : null}
+            </p>
+          </div>
+          <GitHubRepoSelector
+            onSaved={async message => {
+              setResult(message)
+              setError(null)
+              await refreshGraphAfterGitHubChange()
+              onConnected()
+            }}
+            onError={msg => {
+              setError(msg)
+              setResult(null)
+            }}
+          />
+        </>
       )}
 
       {connected && !isGitHub && typeof meta.headline === 'string' && (
@@ -233,9 +236,9 @@ export default function IntegrationCard({
               ? 'Redirecting…'
               : `Connect your ${isGitHub ? 'GitHub' : 'LinkedIn'}`}
         </button>
-      ) : (
+      ) : !isGitHub ? (
         <div className="flex flex-col sm:flex-row gap-2">
-          {!isGitHub && !showManual && (
+          {!showManual && (
             <button
               onClick={() => setShowManual(true)}
               className="flex-1 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white text-sm transition-colors"
@@ -244,20 +247,16 @@ export default function IntegrationCard({
             </button>
           )}
           <button
-            onClick={isGitHub ? handleImportGitHub : handleImportLinkedIn}
+            onClick={handleImportLinkedIn}
             disabled={loading === 'import'}
-            className={`flex-1 py-2.5 rounded-xl font-medium text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 ${
-              isGitHub
-                ? 'bg-white/15 hover:bg-white/25 text-white'
-                : 'bg-blue-600/30 hover:bg-blue-600/50 text-blue-200'
-            }`}
+            className="flex-1 py-2.5 rounded-xl font-medium text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 bg-blue-600/30 hover:bg-blue-600/50 text-blue-200"
           >
             {loading === 'import' ? (
               <><div className="w-3.5 h-3.5 border-2 border-current/30 border-t-current rounded-full animate-spin" /> Importing…</>
             ) : 'Import to graph'}
           </button>
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

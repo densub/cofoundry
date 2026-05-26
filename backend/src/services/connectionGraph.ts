@@ -1,4 +1,11 @@
 import { supabaseAdmin } from '../lib/supabase'
+import {
+  filterEdgesForNodes,
+  filterExposedNodes,
+  getGitHubRepoSelection,
+  getGitHubRepoSelections,
+  isNodeExposed,
+} from './githubSelection'
 
 export interface MatchedProjectPair {
   myNodeId: string
@@ -41,12 +48,41 @@ export async function computePairProjectMatches(
   userId: string,
   otherUserId: string
 ): Promise<{ matchedNodes: MatchedProjectPair[]; score: number }> {
-  const { data: myNodes } = await supabaseAdmin
+  const [selections, { data: myNodesRaw }] = await Promise.all([
+    getGitHubRepoSelections([userId, otherUserId]),
+    supabaseAdmin
+      .from('nodes')
+      .select('id, title, type, embedding, metadata')
+      .eq('user_id', userId)
+      .in('type', OVERLAP_TYPES)
+      .not('embedding', 'is', null),
+  ])
+
+  const mySelection = selections.get(userId) ?? null
+  const theirSelection = selections.get(otherUserId) ?? null
+  const myNodes = (myNodesRaw ?? []).filter(n =>
+    isNodeExposed(
+      { type: n.type, title: n.title, metadata: n.metadata as Record<string, unknown> },
+      mySelection,
+    ),
+  )
+
+  const { data: theirNodesRaw } = await supabaseAdmin
     .from('nodes')
-    .select('id, title, type, embedding')
-    .eq('user_id', userId)
+    .select('id, title, type, metadata')
+    .eq('user_id', otherUserId)
     .in('type', OVERLAP_TYPES)
-    .not('embedding', 'is', null)
+
+  const theirExposedIds = new Set(
+    (theirNodesRaw ?? [])
+      .filter(n =>
+        isNodeExposed(
+          { type: n.type, title: n.title, metadata: n.metadata as Record<string, unknown> },
+          theirSelection,
+        ),
+      )
+      .map(n => n.id),
+  )
 
   if (!myNodes?.length) return { matchedNodes: [], score: 0 }
 
@@ -71,6 +107,7 @@ export async function computePairProjectMatches(
         similarity: number
       }>) {
         if (match.user_id !== otherUserId || !OVERLAP_TYPES.includes(match.type)) continue
+        if (!theirExposedIds.has(match.id)) continue
         const key = `${myNode.id}:${match.id}`
         const existing = pairMap.get(key)
         if (!existing || match.similarity > existing.similarity) {
@@ -102,15 +139,18 @@ export async function loadUserProjectGraph(userId: string): Promise<{
   nodes: GraphNodeRow[]
   edges: GraphEdgeRow[]
 }> {
-  const { data: nodes } = await supabaseAdmin
-    .from('nodes')
-    .select(
-      'id, user_id, parent_id, type, title, content, summary, metadata, is_root, size_weight, created_at, updated_at'
-    )
-    .eq('user_id', userId)
-    .in('type', ['root', 'project', 'skill', 'expertise'])
+  const [selection, { data: nodes }] = await Promise.all([
+    getGitHubRepoSelection(userId),
+    supabaseAdmin
+      .from('nodes')
+      .select(
+        'id, user_id, parent_id, type, title, content, summary, metadata, is_root, size_weight, created_at, updated_at'
+      )
+      .eq('user_id', userId)
+      .in('type', ['root', 'project', 'skill', 'expertise']),
+  ])
 
-  const nodeRows = (nodes ?? []) as GraphNodeRow[]
+  const nodeRows = filterExposedNodes((nodes ?? []) as GraphNodeRow[], selection)
   const nodeIds = nodeRows.map(n => n.id)
   if (!nodeIds.length) return { nodes: [], edges: [] }
 
@@ -120,9 +160,7 @@ export async function loadUserProjectGraph(userId: string): Promise<{
     .in('from_node_id', nodeIds)
 
   const visible = new Set(nodeIds)
-  const edgeRows = ((edges ?? []) as GraphEdgeRow[]).filter(
-    e => visible.has(e.from_node_id) && visible.has(e.to_node_id)
-  )
+  const edgeRows = filterEdgesForNodes((edges ?? []) as GraphEdgeRow[], visible)
 
   return { nodes: nodeRows, edges: edgeRows }
 }
