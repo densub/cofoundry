@@ -13,8 +13,35 @@ function getSupabaseEnv() {
 
 function databaseUrlForEnv(supabaseEnv) {
   const named = process.env[`SUPABASE_DATABASE_URL_${supabaseEnv}`]?.trim()
-  if (named) return named
-  return process.env.DATABASE_URL?.trim() || null
+  if (named) return normalizeDatabaseUrl(named)
+  const fallback = process.env.DATABASE_URL?.trim()
+  return fallback ? normalizeDatabaseUrl(fallback) : null
+}
+
+/** Encode user/password when special chars (e.g. #) break URL parsing. */
+function normalizeDatabaseUrl(raw) {
+  const trimmed = raw.trim().replace(/^postgres:\/\//i, 'postgresql://')
+  if (canParseDatabaseUrl(trimmed)) return trimmed
+
+  const m = trimmed.match(/^(postgres(?:ql)?:\/\/)([^:@/]+):([^@]+)@(.+)$/i)
+  if (!m) return trimmed
+
+  const [, proto, user, password, hostAndPath] = m
+  const fixed = `${proto}${encodeURIComponent(user)}:${encodeURIComponent(password)}@${hostAndPath}`
+  if (canParseDatabaseUrl(fixed)) {
+    console.log('Encoded database credentials in connection URL (password had special characters).')
+    return fixed
+  }
+  return trimmed
+}
+
+function canParseDatabaseUrl(url) {
+  try {
+    new URL(url.replace(/^postgresql:/i, 'postgres:'))
+    return true
+  } catch {
+    return false
+  }
 }
 
 function projectRefFromUrl(url) {
@@ -120,6 +147,11 @@ async function tryLegacyConnect() {
 
 async function connect() {
   if (databaseUrl) {
+    if (!canParseDatabaseUrl(databaseUrl)) {
+      console.error('✗ SUPABASE_DATABASE_URL_PROD is not a valid Postgres URI.')
+      console.error('  If your password contains #, @, or ?, use the URI from Supabase (encoded) or re-sync after saving the URL in backend/.env.')
+      return null
+    }
     try {
       return await connectWithUrl(databaseUrl)
     } catch (e) {
@@ -148,10 +180,13 @@ async function main() {
 
   if (!client) {
     console.error('\n✗ Could not connect to the database.')
-    console.error('\nSet SUPABASE_DATABASE_URL_PROD to the full connection string from Supabase, e.g.:')
-    console.error(
-      '  postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres',
-    )
+    if (!databaseUrl) {
+      console.error(`\nSet SUPABASE_DATABASE_URL_${supabaseEnv} in backend/.env (then ./infra/gcp/sync-secrets.sh for deploy).`)
+      console.error('Use the Session pooler URI from Supabase → Database → Connection string.')
+    } else {
+      console.error('\nCheck SUPABASE_DATABASE_URL_PROD: copy the full URI from Supabase (password must be URL-encoded).')
+      console.error('Prefer the pooler host (aws-0-…pooler.supabase.com:6543), not db.*.supabase.co, for CI.')
+    }
     console.error('\nOr run migrations manually in the Supabase SQL editor:')
     console.error(`  https://supabase.com/dashboard/project/${REF}/sql/new\n`)
     process.exit(1)
