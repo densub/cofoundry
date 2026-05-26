@@ -1,4 +1,4 @@
-import { describe, beforeEach, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { getCachedInsights, setCachedInsights } from '../lib/matchInsightsCache'
 import type { MatchInsights, MatchedNodePair } from '../types'
 
@@ -20,9 +20,18 @@ const pairs: MatchedNodePair[] = [
 
 const insights: MatchInsights = {
   summary: 'Strong technical overlap in TypeScript projects.',
-  keyOverlaps: ['TypeScript', 'React'],
-  complementaryStrengths: ['Frontend', 'Backend'],
-  collaborationIdeas: ['Build a shared SDK'],
+  projectOverlaps: [
+    {
+      yourProject: 'Project A',
+      theirProject: 'Project B',
+      similarity: 0.8,
+      yourStack: 'TypeScript, React',
+      theirStack: 'TypeScript, Node',
+      projectIdea: 'Build a shared SDK',
+      commonInterest: 'Open source tooling',
+      collaboration: 'Co-author a library',
+    },
+  ],
 }
 
 // The module uses a module-level Map, so we need a stable test order.
