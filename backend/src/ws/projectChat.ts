@@ -1,5 +1,5 @@
 import type { IncomingMessage } from 'http'
-import { WebSocketServer } from 'ws'
+import WebSocket, { WebSocketServer } from 'ws'
 import { supabaseAdmin } from '../lib/supabase'
 import { draftGitHubIssueFromChat, generateChatInsights } from '../services/cofoundryChatAssistant'
 
@@ -124,17 +124,17 @@ export function attachProjectChatWSServer(server: import('http').Server) {
   const wss = new WebSocketServer({ server, path: '/ws/project-chat' })
 
   // Track connections by ideaId for broadcast
-  const rooms = new Map<string, Set<import('ws').WebSocket>>()
-  const clientInfo = new WeakMap<import('ws').WebSocket, ChatClient>()
+  const rooms = new Map<string, Set<WebSocket>>()
+  const clientInfo = new WeakMap<WebSocket, ChatClient>()
   const pendingIssueDraft = new Map<string, { repoFullName: string; title: string; body: string; labels?: string[] }>()
 
-  function joinRoom(ws: import('ws').WebSocket, ideaId: string) {
+  function joinRoom(ws: WebSocket, ideaId: string) {
     const set = rooms.get(ideaId) ?? new Set()
     set.add(ws)
     rooms.set(ideaId, set)
   }
 
-  function leaveRooms(ws: import('ws').WebSocket) {
+  function leaveRooms(ws: WebSocket) {
     for (const [, set] of rooms) set.delete(ws)
   }
 
@@ -147,7 +147,7 @@ export function attachProjectChatWSServer(server: import('http').Server) {
     }
   }
 
-  function sendAI(ws: import('ws').WebSocket, content: string) {
+  function sendAI(ws: WebSocket, content: string) {
     if (ws.readyState !== ws.OPEN) return
     ws.send(JSON.stringify({
       type: 'ai_message',
@@ -162,7 +162,7 @@ export function attachProjectChatWSServer(server: import('http').Server) {
     }))
   }
 
-  wss.on('connection', async (ws, req) => {
+  wss.on('connection', async (ws: WebSocket, req: IncomingMessage) => {
     try {
       const q = getQuery(req)
       const token = (q.get('token') ?? '').trim()
@@ -195,7 +195,7 @@ export function attachProjectChatWSServer(server: import('http').Server) {
       ws.send(JSON.stringify({ type: 'ready' }))
       ws.send(JSON.stringify({ type: 'history', messages: await fetchRecentMessages(ideaId) }))
 
-      ws.on('message', async raw => {
+      ws.on('message', async (raw: WebSocket.RawData) => {
         let parsed: any
         try {
           parsed = JSON.parse(String(raw))
