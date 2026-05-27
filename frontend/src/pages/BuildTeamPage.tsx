@@ -1121,8 +1121,10 @@ export default function BuildTeamPage() {
       }
 
       const wsBase =
-        (import.meta as any)?.env?.VITE_WS_BASE_URL
-          ? String((import.meta as any).env.VITE_WS_BASE_URL)
+        (import.meta as any)?.env?.VITE_PROD_WS_BASE_URL
+          ? String((import.meta as any).env.VITE_PROD_WS_BASE_URL)
+          : (import.meta as any)?.env?.VITE_WS_BASE_URL
+            ? String((import.meta as any).env.VITE_WS_BASE_URL)
           : (import.meta as any)?.env?.DEV
             ? 'ws://localhost:3001'
             : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`

@@ -91,7 +91,8 @@ cp frontend/.env.example frontend/.env
 | `VITE_SUPABASE_URL_TEST` / `VITE_SUPABASE_ANON_KEY_TEST` | Test project (optional; leave empty) |
 | `VITE_API_URL` | Backend URL, e.g. `http://localhost:3001` |
 | `VITE_AUTH_REDIRECT_URL` | Optional; default `{origin}/auth/callback` |
-| `VITE_WS_BASE_URL` | WebSocket base URL for project chat, e.g. `wss://api.yourdomain.com` (dev defaults to `ws://localhost:3001`) |
+| `VITE_WS_BASE_URL` | Optional WS base URL override for project chat |
+| `VITE_PROD_WS_BASE_URL` | Production WebSocket base URL for project chat, e.g. `wss://api.cofoundry.app` (dev defaults to `ws://localhost:3001`) |
 
 **Sign in / sign up with GitHub (Supabase Auth)**
 

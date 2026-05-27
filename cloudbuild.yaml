@@ -16,6 +16,8 @@ availableSecrets:
       env: VITE_SUPABASE_URL_PROD
     - versionName: projects/$PROJECT_ID/secrets/VITE_SUPABASE_ANON_KEY_PROD/versions/latest
       env: VITE_SUPABASE_ANON_KEY_PROD
+    - versionName: projects/$PROJECT_ID/secrets/VITE_PROD_WS_BASE_URL/versions/latest
+      env: VITE_PROD_WS_BASE_URL
     - versionName: projects/$PROJECT_ID/secrets/SUPABASE_URL_PROD/versions/latest
       env: SUPABASE_URL_PROD
     - versionName: projects/$PROJECT_ID/secrets/SUPABASE_ANON_KEY_PROD/versions/latest
@@ -117,6 +119,7 @@ steps:
     secretEnv:
       - VITE_SUPABASE_URL_PROD
       - VITE_SUPABASE_ANON_KEY_PROD
+      - VITE_PROD_WS_BASE_URL
     entrypoint: bash
     args:
       - -c
@@ -127,6 +130,7 @@ steps:
           --build-arg VITE_SUPABASE_ENV=PROD \
           --build-arg VITE_SUPABASE_URL_PROD="$$VITE_SUPABASE_URL_PROD" \
           --build-arg VITE_SUPABASE_ANON_KEY_PROD="$$VITE_SUPABASE_ANON_KEY_PROD" \
+          --build-arg VITE_PROD_WS_BASE_URL="$$VITE_PROD_WS_BASE_URL" \
           -t ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/frontend:$BUILD_ID \
           -t ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/frontend:latest \
           frontend
