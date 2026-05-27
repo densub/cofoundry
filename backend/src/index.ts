@@ -9,6 +9,8 @@ import integrationRoutes from './routes/integrations'
 import connectionRoutes from './routes/connections'
 import teamRoutes from './routes/team'
 import { getSupabaseEnv } from './lib/supabaseConfig'
+import http from 'http'
+import { attachProjectChatWSServer } from './ws/projectChat'
 
 const app = express()
 const PORT = process.env.PORT ?? 3001
@@ -26,6 +28,10 @@ app.use('/api/integrations', integrationRoutes)
 app.use('/api/connections', connectionRoutes)
 app.use('/api/team', teamRoutes)
 
-app.listen(Number(PORT), '0.0.0.0', () => {
+const server = http.createServer(app)
+attachProjectChatWSServer(server)
+
+server.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`Backend running on http://0.0.0.0:${PORT} (Supabase: ${getSupabaseEnv()})`)
+  console.log(`WS project chat: ws://0.0.0.0:${PORT}/ws/project-chat`)
 })

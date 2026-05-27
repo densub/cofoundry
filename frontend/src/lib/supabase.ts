@@ -13,3 +13,8 @@ export async function getAuthHeader(): Promise<Record<string, string>> {
   if (!session) return {}
   return { Authorization: `Bearer ${session.access_token}` }
 }
+
+export async function getAccessToken(): Promise<string | null> {
+  const session = await getSession()
+  return session?.access_token ?? null
+}

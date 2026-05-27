@@ -330,6 +330,28 @@ export const teamApi = {
   getRequests: () =>
     request<{ sent: import('../types').TeamRequest[]; received: import('../types').TeamRequest[] }>('/team/requests'),
 
+  getMembers: (params: { idea_id?: string; node_id?: string }) => {
+    const qs = new URLSearchParams()
+    if (params.idea_id) qs.set('idea_id', params.idea_id)
+    if (params.node_id) qs.set('node_id', params.node_id)
+    const q = qs.toString()
+    return request<{ members: import('../types').ProjectMember[] }>(`/team/members${q ? `?${q}` : ''}`)
+  },
+
+  removeMember: (id: string) =>
+    request<void>(`/team/members/${id}`, { method: 'DELETE' }),
+
+  setMemberOwner: (id: string, is_owner: boolean) =>
+    request<import('../types').ProjectMember>(`/team/members/${id}/owner`, { method: 'PATCH', body: JSON.stringify({ is_owner }) }),
+
+  getChatMessages: (params: { idea_id: string }) => {
+    const qs = new URLSearchParams({ idea_id: params.idea_id })
+    return request<{ messages: import('../types').ProjectChatMessage[] }>(`/team/chat/messages?${qs.toString()}`)
+  },
+
+  sendChatMessage: (data: { idea_id: string; body: string }) =>
+    request<import('../types').ProjectChatMessage>('/team/chat/messages', { method: 'POST', body: JSON.stringify(data) }),
+
   onboardCollaborator: (data: {
     display_name: string
     headline: string
@@ -346,6 +368,9 @@ export const teamApi = {
 
   // ── Project Ideas ─────────────────────────────────────────────────────────
   listMyIdeas: () => request<{ ideas: ProjectIdea[] }>('/team/ideas/mine'),
+  listAccessibleIdeas: () => request<{ ideas: ProjectIdea[] }>('/team/ideas/accessible'),
+  createGitHubRepoForIdea: (id: string) =>
+    request<{ idea: ProjectIdea; node: import('../types').KNode; repo: { full_name: string; html_url: string } }>(`/team/ideas/${id}/github-repo`, { method: 'POST' }),
 
   createIdea: (data: {
     title: string

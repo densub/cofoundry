@@ -239,6 +239,9 @@ export interface ProjectIdea {
   status: 'active' | 'paused' | 'filled'
   created_at: string
   updated_at: string
+  // Computed by backend for Build a Team UI
+  access?: 'owner' | 'member' | 'invited_pending'
+  pending_team_request_id?: string | null
 }
 
 export interface TeamAnalysis {
@@ -301,4 +304,27 @@ export interface TeamProject {
   created_at: string
   nodes: { id: string; title: string; user_id: string } | null
   profiles: { id: string; display_name: string | null; avatar_url: string | null; username: string | null } | null
+}
+
+export interface ProjectMember {
+  id: string
+  idea_id: string | null
+  node_id: string | null
+  user_id: string
+  added_by_user_id: string | null
+  role: string | null
+  status: 'active' | 'removed'
+  is_owner?: boolean
+  created_at: string
+  updated_at: string
+  profile: { id: string; display_name: string | null; avatar_url: string | null; username: string | null; role: string | null } | null
+}
+
+export interface ProjectChatMessage {
+  id: string
+  idea_id: string
+  sender_id: string
+  body: string
+  created_at: string
+  sender: { id: string; display_name: string | null; avatar_url: string | null; username: string | null } | null
 }

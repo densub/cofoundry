@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import { connectionsApi } from '../../lib/api'
+import { connectionsApi, teamApi } from '../../lib/api'
 import {
   CONNECTION_REQUESTS_SEEN_EVENT,
   countUnseenConnectionRequests,
 } from '../../lib/connectionNotifications'
+import {
+  TEAM_REQUESTS_SEEN_EVENT,
+  countUnseenTeamRequests,
+} from '../../lib/teamRequestNotifications'
 import { useStore } from '../../store/useStore'
 import { Logo } from '../brand/Logo'
 
@@ -63,6 +67,7 @@ export default function Navbar() {
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
   const [unseenRequests, setUnseenRequests] = useState(0)
+  const [unseenTeamRequests, setUnseenTeamRequests] = useState(0)
 
   const links: NavLink[] = [
     { to: '/dashboard', label: 'My Graph', Icon: GraphIcon },
@@ -79,6 +84,7 @@ export default function Navbar() {
   useEffect(() => {
     if (!profile?.id || !profile.is_onboarded) {
       setUnseenRequests(0)
+      setUnseenTeamRequests(0)
       return
     }
 
@@ -95,25 +101,55 @@ export default function Navbar() {
       }
     }
 
+    async function refreshUnseenTeamRequests() {
+      try {
+        const { received } = await teamApi.getRequests()
+        const pending = received.filter(r => r.status === 'pending')
+        if (!cancelled) {
+          setUnseenTeamRequests(countUnseenTeamRequests(profile!.id, pending))
+        }
+      } catch {
+        if (!cancelled) setUnseenTeamRequests(0)
+      }
+    }
+
     refreshUnseenRequests()
+    refreshUnseenTeamRequests()
     const interval = window.setInterval(refreshUnseenRequests, 30_000)
+    const teamInterval = window.setInterval(refreshUnseenTeamRequests, 30_000)
     window.addEventListener('focus', refreshUnseenRequests)
     window.addEventListener(CONNECTION_REQUESTS_SEEN_EVENT, refreshUnseenRequests)
+    window.addEventListener('focus', refreshUnseenTeamRequests)
+    window.addEventListener(TEAM_REQUESTS_SEEN_EVENT, refreshUnseenTeamRequests)
 
     return () => {
       cancelled = true
       window.clearInterval(interval)
+      window.clearInterval(teamInterval)
       window.removeEventListener('focus', refreshUnseenRequests)
       window.removeEventListener(CONNECTION_REQUESTS_SEEN_EVENT, refreshUnseenRequests)
+      window.removeEventListener('focus', refreshUnseenTeamRequests)
+      window.removeEventListener(TEAM_REQUESTS_SEEN_EVENT, refreshUnseenTeamRequests)
     }
   }, [profile?.id, profile?.is_onboarded, location.pathname])
 
   function notificationBadge(link: NavLink) {
-    if (link.to !== '/connections' || unseenRequests === 0) return null
+    if (link.to === '/connections' && unseenRequests > 0) {
+      return (
+        <span className="absolute -top-1 -right-1 sm:-top-1.5 sm:-right-1.5 min-w-4 h-4 px-1 rounded-full bg-red-500 text-white text-[0.7rem] leading-none font-bold flex items-center justify-center shadow-lg shadow-red-500/30 ring-2 ring-space-900">
+          {unseenRequests > 99 ? '99+' : unseenRequests}
+        </span>
+      )
+    }
+    if (link.to === '/build-team' && unseenTeamRequests > 0) {
+      return (
+        <span className="absolute -top-1 -right-1 sm:-top-1.5 sm:-right-1.5 min-w-4 h-4 px-1 rounded-full bg-red-500 text-white text-[0.7rem] leading-none font-bold flex items-center justify-center shadow-lg shadow-red-500/30 ring-2 ring-space-900">
+          {unseenTeamRequests > 99 ? '99+' : unseenTeamRequests}
+        </span>
+      )
+    }
     return (
-      <span className="absolute -top-1 -right-1 sm:-top-1.5 sm:-right-1.5 min-w-4 h-4 px-1 rounded-full bg-red-500 text-white text-[0.7rem] leading-none font-bold flex items-center justify-center shadow-lg shadow-red-500/30 ring-2 ring-space-900">
-        {unseenRequests > 99 ? '99+' : unseenRequests}
-      </span>
+      null
     )
   }
 
